@@ -1,0 +1,10 @@
+export { ProtectedRoute } from './ProtectedRoute/ProtectedRoute';
+export { StaffTable } from './StaffTable/StaffTable';
+export { AssignProgramsModal } from './AssignProgramsModal/AssignProgramsModal';
+export { StudentsTable } from './StudentsTable/StudentsTable';
+export { StudentDetailsModal } from './StudentDetailsModal/StudentDetailsModal';
+export { PreEnrollmentsTable } from './PreEnrollmentsTable/PreEnrollmentsTable';
+export { PreEnrollmentDetailsModal } from './PreEnrollmentDetailsModal/PreEnrollmentDetailsModal';
+export { PaymentsTable } from './PaymentsTable/PaymentsTable';
+export { PaymentValidationModal } from './PaymentValidationModal/PaymentValidationModal';
+export { DocumentUploader } from './DocumentUploader/DocumentUploader';

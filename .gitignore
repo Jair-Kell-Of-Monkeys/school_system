@@ -1,0 +1,7 @@
+# Ignorar configuraciones del IDE a nivel de proyecto
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
