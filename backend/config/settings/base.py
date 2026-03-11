@@ -340,3 +340,9 @@ PAYMENT_AMOUNTS = {
 # ============================================================================
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
 EMAIL_VERIFICATION_EXPIRY_HOURS = 24
+
+# ============================================================================
+# INSTITUTIONAL EMAIL CONFIGURATION
+# ============================================================================
+
+INSTITUTIONAL_EMAIL_DOMAIN = config('INSTITUTIONAL_EMAIL_DOMAIN', default='universidad.edu.mx')
