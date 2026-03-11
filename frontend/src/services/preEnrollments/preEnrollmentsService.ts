@@ -1,6 +1,8 @@
 import axios from '../api/axios';
 import type { PreEnrollment, PreEnrollmentDetail, PaginatedResponse } from '@/types';
 
+
+
 export const preEnrollmentsService = {
   // Listar pre-inscripciones
   async getPreEnrollments(params?: {
@@ -70,6 +72,18 @@ export const preEnrollmentsService = {
   // Estadísticas
   async getStats(): Promise<any> {
     const response = await axios.get('/pre-enrollments/pre-enrollments/stats/');
+    return response.data;
+  },
+
+  // Aceptar o rechazar aspirante tras examen (crea Enrollment en backend si se acepta)
+  async setExamResult(
+    id: string,
+    data: { decision: 'accepted' | 'rejected'; notes?: string; exam_score?: number }
+  ): Promise<PreEnrollmentDetail> {
+    const response = await axios.post(
+      `/pre-enrollments/pre-enrollments/${id}/set-exam-result/`,
+      data
+    );
     return response.data;
   },
 };

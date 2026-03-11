@@ -333,7 +333,140 @@ class PreEnrollmentViewSet(viewsets.ModelViewSet):
             'message': 'Aspirante rechazado',
             'pre_enrollment': serializer.data
         })
-    
+
+    @action(
+        detail=True,
+        methods=['post'],
+        permission_classes=[IsAdminOrServiciosEscolares],
+        url_path='set-exam-result',
+    )
+    def set_exam_result(self, request, pk=None):
+        """
+        Marca el resultado final de un aspirante directamente desde estado
+        'payment_validated' o 'exam_completed', creando automáticamente el
+        registro de inscripción si la decisión es 'accepted'.
+
+        POST /api/pre-enrollments/pre-enrollments/{id}/set-exam-result/
+        Body: {
+            "decision": "accepted" | "rejected",
+            "notes": "...",
+            "exam_score": 85.5  (opcional)
+        }
+        """
+        pre_enrollment = self.get_object()
+
+        if pre_enrollment.status not in ('payment_validated', 'exam_completed'):
+            return Response(
+                {
+                    'error': (
+                        "La pre-inscripción debe estar en estado 'payment_validated' "
+                        "o 'exam_completed'"
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        decision = request.data.get('decision')
+        notes = request.data.get('notes', '')
+        exam_score = request.data.get('exam_score')
+
+        if decision not in ('accepted', 'rejected'):
+            return Response(
+                {'error': "El campo 'decision' debe ser 'accepted' o 'rejected'"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if decision == 'rejected' and not notes:
+            return Response(
+                {'error': "El campo 'notes' es requerido al rechazar"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Registrar calificación si se proporciona
+        if exam_score is not None:
+            try:
+                score_value = float(exam_score)
+                if not (0 <= score_value <= 100):
+                    raise ValueError
+                pre_enrollment.exam_score = score_value
+                pre_enrollment.exam_completed_at = timezone.now()
+            except (ValueError, TypeError):
+                return Response(
+                    {'error': 'exam_score debe ser un número entre 0 y 100'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        pre_enrollment.status = decision
+        pre_enrollment.approved_at = timezone.now()
+        pre_enrollment.approved_by = request.user
+        if notes:
+            pre_enrollment.notes = notes
+        pre_enrollment.save()
+
+        if decision == 'accepted':
+            from apps.enrollments.models import Enrollment
+            from apps.enrollments.generators import generate_matricula, generate_institutional_email
+
+            student = pre_enrollment.student
+            program = pre_enrollment.program
+            period = pre_enrollment.period
+
+            # Verificar que no exista ya una inscripción
+            if not Enrollment.objects.filter(pre_enrollment=pre_enrollment).exists():
+                try:
+                    matricula = generate_matricula(
+                        program_code=program.code,
+                        period_year=str(period.start_date.year),
+                    )
+                except ValueError as exc:
+                    logger.error('[set_exam_result] Error generando matrícula: %s', exc)
+                    return Response({'error': str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                try:
+                    if not student.institutional_email:
+                        institutional_email = generate_institutional_email(student)
+                        student.institutional_email = institutional_email
+                        student.save(update_fields=['institutional_email'])
+                except ValueError as exc:
+                    logger.error('[set_exam_result] Error generando correo institucional: %s', exc)
+                    return Response({'error': str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                enrollment = Enrollment(
+                    student=student,
+                    program=program,
+                    period=period,
+                    pre_enrollment=pre_enrollment,
+                    matricula=matricula,
+                    status='pending_documents',
+                    enrolled_at=timezone.now(),
+                )
+                enrollment.save()
+
+                logger.info(
+                    '[set_exam_result] Inscripción creada: matricula=%s student=%s',
+                    matricula, student.pk,
+                )
+
+                from apps.enrollments.tasks import send_enrollment_accepted_email_task
+                try:
+                    send_enrollment_accepted_email_task.delay(str(enrollment.id))
+                except Exception:
+                    from apps.enrollments.email_service import send_enrollment_accepted_email
+                    send_enrollment_accepted_email(enrollment)
+        else:
+            from apps.enrollments.tasks import send_enrollment_rejected_email_task
+            try:
+                send_enrollment_rejected_email_task.delay(str(pre_enrollment.id))
+            except Exception:
+                from apps.enrollments.email_service import send_enrollment_rejected_email
+                send_enrollment_rejected_email(pre_enrollment)
+
+        serializer = PreEnrollmentDetailSerializer(pre_enrollment)
+        return Response({
+            'message': f"Aspirante {'aceptado' if decision == 'accepted' else 'rechazado'} correctamente",
+            'pre_enrollment': serializer.data,
+        })
+
     @action(
         detail=True,
         methods=['post'],

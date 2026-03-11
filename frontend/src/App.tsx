@@ -8,6 +8,7 @@ import { Staff } from '@/pages/Staff/Staff';
 import { Students } from '@/pages/Students/Students';
 import { PreEnrollments } from '@/pages/PreEnrollments/PreEnrollments';
 import { Payments } from '@/pages/Payments/Payments';
+import { Enrollments } from '@/pages/Enrollments/Enrollments';
 import { DashboardLayout } from '@/components/templates/DashboardLayout/DashboardLayout';
 import { MyApplication } from '@/pages/MyApplication/MyApplication';
 import { ProtectedRoute } from '@/components/organisms/ProtectedRoute/ProtectedRoute';
@@ -93,13 +94,31 @@ function App() {
             }
           />
           
-          {/* Mi Solicitud - Solo Aspirantes */}
+          {/* Mi Solicitud - Aspirantes y Alumnos */}
           <Route
             path="/my-application"
             element={
-              <ProtectedRoute allowedRoles={[ROLES.ASPIRANTE]}>
+              <ProtectedRoute allowedRoles={[ROLES.ASPIRANTE, ROLES.ALUMNO]}>
                 <DashboardLayout>
                   <MyApplication />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Inscripciones - Jefa, Admin y Encargados */}
+          <Route
+            path={ROUTES.ENROLLMENTS}
+            element={
+              <ProtectedRoute
+                allowedRoles={[
+                  ROLES.ADMIN,
+                  ROLES.JEFE_SERVICIOS,
+                  ROLES.SERVICIOS_ESCOLARES,
+                ]}
+              >
+                <DashboardLayout>
+                  <Enrollments />
                 </DashboardLayout>
               </ProtectedRoute>
             }

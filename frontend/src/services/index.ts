@@ -4,3 +4,4 @@ export { preEnrollmentsService } from './preEnrollments/preEnrollmentsService';
 export { paymentsService } from './payments/paymentsService';
 export { aspirantService } from './aspirant/aspirantService';
 export { authService } from './auth/authService';
+export { enrollmentsService } from './enrollments/enrollmentsService';

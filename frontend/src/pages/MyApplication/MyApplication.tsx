@@ -7,7 +7,9 @@ import { StatusTimeline } from '@/components/molecules/StatusTimeline/StatusTime
 import { DocumentUploader } from '@/components/organisms/DocumentUploader/DocumentUploader';
 import { aspirantService } from '@/services/aspirant/aspirantService';
 import { paymentsService } from '@/services/payments/paymentsService';
+import { enrollmentsService } from '@/services/enrollments/enrollmentsService';
 import type { TimelineStep } from '@/components/molecules/StatusTimeline/StatusTimeline';
+import type { EnrollmentDetail } from '@/types';
 import {
   FileText,
   Calendar,
@@ -18,9 +20,19 @@ import {
   Download,
   Upload,
   XCircle,
+  BookOpen,
+  GraduationCap,
 } from 'lucide-react';
 
+// Documentos requeridos para inscripción formal
+const ENROLLMENT_DOC_TYPES = [
+  { key: 'numero_seguridad_social', label: 'Número de Seguridad Social' },
+  { key: 'certificado_bachillerato', label: 'Certificado de Bachillerato Original' },
+  { key: 'acta_nacimiento', label: 'Acta de Nacimiento Original' },
+] as const;
+
 const PAYMENT_STATUSES = ['payment_pending', 'payment_submitted', 'payment_validated'];
+const ENROLLMENT_PAYMENT_STATUSES = ['payment_pending', 'payment_submitted', 'payment_validated'];
 
 export const MyApplication = () => {
   const queryClient = useQueryClient();
@@ -30,6 +42,11 @@ export const MyApplication = () => {
   const [paymentDate, setPaymentDate] = useState('');
   const [isDownloadingSlip, setIsDownloadingSlip] = useState(false);
   const [isDownloadingReceipt, setIsDownloadingReceipt] = useState(false);
+  const [enrollmentReceiptFile, setEnrollmentReceiptFile] = useState<File | null>(null);
+  const [enrollmentPaymentDate, setEnrollmentPaymentDate] = useState('');
+  const [isDownloadingEnrollSlip, setIsDownloadingEnrollSlip] = useState(false);
+  const [isDownloadingEnrollReceipt, setIsDownloadingEnrollReceipt] = useState(false);
+  const [enrollDocFiles, setEnrollDocFiles] = useState<Record<string, File | null>>({});
 
   // ── Queries ──────────────────────────────────────────────────────────────
 
@@ -54,6 +71,21 @@ export const MyApplication = () => {
     queryKey: ['my-payment', application?.id],
     queryFn: () => paymentsService.getPaymentForPreEnrollment(application!.id),
     enabled: !!application && PAYMENT_STATUSES.includes(application.status),
+  });
+
+  // Carga la inscripción formal cuando la solicitud fue aceptada
+  const { data: myEnrollments } = useQuery({
+    queryKey: ['my-enrollment'],
+    queryFn: enrollmentsService.getMyEnrollments,
+    enabled: !!application && application.status === 'accepted',
+  });
+  const enrollment: EnrollmentDetail | undefined = myEnrollments?.[0];
+
+  // Pago de inscripción (cuando enrollment está en pending_payment)
+  const { data: enrollmentPayment, isLoading: isEnrollPaymentLoading } = useQuery({
+    queryKey: ['enrollment-payment', application?.id],
+    queryFn: () => paymentsService.getPaymentForPreEnrollment(application!.id),
+    enabled: !!enrollment && ENROLLMENT_PAYMENT_STATUSES.includes(enrollment.status),
   });
 
   // ── Mutations ─────────────────────────────────────────────────────────────
@@ -109,6 +141,50 @@ export const MyApplication = () => {
     },
   });
 
+  const uploadEnrollDocMutation = useMutation({
+    mutationFn: ({ docType, file }: { docType: string; file: File }) => {
+      const fd = new FormData();
+      fd.append('document_type', docType);
+      fd.append('file', file);
+      return enrollmentsService.uploadDocument(enrollment!.id, fd);
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['my-enrollment'] });
+      setEnrollDocFiles((prev) => ({ ...prev, [vars.docType]: null }));
+    },
+    onError: () => {
+      alert('Error al subir el documento. Intenta de nuevo.');
+    },
+  });
+
+  const createEnrollPaymentMutation = useMutation({
+    mutationFn: () =>
+      paymentsService.createPayment({
+        payment_type: 'inscripcion',
+        pre_enrollment: application!.id,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['enrollment-payment', application!.id] });
+    },
+    onError: () => {
+      alert('Error al generar la ficha de pago. Intenta de nuevo.');
+    },
+  });
+
+  const uploadEnrollReceiptMutation = useMutation({
+    mutationFn: (data: FormData) => paymentsService.uploadReceipt(enrollmentPayment!.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-enrollment'] });
+      queryClient.invalidateQueries({ queryKey: ['enrollment-payment', application!.id] });
+      setEnrollmentReceiptFile(null);
+      setEnrollmentPaymentDate('');
+      alert('Comprobante enviado correctamente. Tu pago está siendo revisado por finanzas.');
+    },
+    onError: () => {
+      alert('Error al subir el comprobante. Intenta de nuevo.');
+    },
+  });
+
   // ── Handlers ─────────────────────────────────────────────────────────────
 
   const handleDownloadSlip = async () => {
@@ -153,6 +229,56 @@ export const MyApplication = () => {
     data.append('receipt_file', receiptFile);
     data.append('payment_date', paymentDate);
     uploadReceiptMutation.mutate(data);
+  };
+
+  const handleUploadEnrollDoc = (docType: string) => {
+    const file = enrollDocFiles[docType];
+    if (!file) return;
+    uploadEnrollDocMutation.mutate({ docType, file });
+  };
+
+  const handleDownloadEnrollSlip = async () => {
+    if (!enrollmentPayment) return;
+    setIsDownloadingEnrollSlip(true);
+    try {
+      const blob = await paymentsService.downloadSlip(enrollmentPayment.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ficha-inscripcion-${enrollmentPayment.receipt_number}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert('Error al descargar la ficha de pago. Intenta de nuevo.');
+    } finally {
+      setIsDownloadingEnrollSlip(false);
+    }
+  };
+
+  const handleDownloadEnrollReceipt = async () => {
+    if (!enrollmentPayment) return;
+    setIsDownloadingEnrollReceipt(true);
+    try {
+      const blob = await paymentsService.downloadReceipt(enrollmentPayment.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `recibo-inscripcion-${enrollmentPayment.receipt_number}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert('Error al descargar el recibo. Intenta de nuevo.');
+    } finally {
+      setIsDownloadingEnrollReceipt(false);
+    }
+  };
+
+  const handleUploadEnrollReceipt = () => {
+    if (!enrollmentReceiptFile || !enrollmentPaymentDate) return;
+    const data = new FormData();
+    data.append('receipt_file', enrollmentReceiptFile);
+    data.append('payment_date', enrollmentPaymentDate);
+    uploadEnrollReceiptMutation.mutate(data);
   };
 
   // ── Timeline ─────────────────────────────────────────────────────────────
@@ -622,6 +748,319 @@ export const MyApplication = () => {
             <p className="text-green-700 mt-2">Bienvenido a {application.program?.name}</p>
           </div>
         </Card>
+      )}
+
+      {/* ── Sección de Inscripción Formal ───────────────────────────────── */}
+      {application.status === 'accepted' && enrollment && (
+        <>
+          {/* Inscripción completada */}
+          {enrollment.status === 'enrolled' && (
+            <Card className="border-l-4 border-green-600 bg-green-50">
+              <div className="text-center py-6">
+                <GraduationCap className="mx-auto text-green-600 mb-4" size={64} />
+                <h2 className="text-2xl font-bold text-green-900">
+                  ¡Inscripción completada!
+                </h2>
+                <p className="text-green-700 mt-2">
+                  Ya eres alumno oficial de {application.program?.name}
+                </p>
+                <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto text-left">
+                  <div className="bg-white rounded-lg p-4 border border-green-200">
+                    <p className="text-xs text-gray-500 mb-1">Matrícula</p>
+                    <p className="text-lg font-mono font-bold text-gray-900">
+                      {enrollment.matricula}
+                    </p>
+                  </div>
+                  {enrollment.student?.institutional_email && (
+                    <div className="bg-white rounded-lg p-4 border border-green-200">
+                      <p className="text-xs text-gray-500 mb-1">Correo institucional</p>
+                      <p className="text-sm font-medium text-gray-900 break-all">
+                        {enrollment.student.institutional_email}
+                      </p>
+                    </div>
+                  )}
+                  {enrollment.group && (
+                    <div className="bg-white rounded-lg p-4 border border-green-200">
+                      <p className="text-xs text-gray-500 mb-1">Grupo</p>
+                      <p className="font-semibold text-gray-900">{enrollment.group}</p>
+                    </div>
+                  )}
+                  {enrollment.schedule && (
+                    <div className="bg-white rounded-lg p-4 border border-green-200">
+                      <p className="text-xs text-gray-500 mb-1">Horario</p>
+                      <p className="font-semibold text-gray-900">{enrollment.schedule}</p>
+                    </div>
+                  )}
+                </div>
+                <p className="text-sm text-green-700 mt-4">
+                  Recibirás un correo con los detalles de activación de tu correo institucional.
+                </p>
+              </div>
+            </Card>
+          )}
+
+          {/* Documentos de inscripción */}
+          {(enrollment.status === 'pending_documents' || enrollment.status === 'pending_payment') && (
+            <Card>
+              <div className="flex items-center mb-5">
+                <BookOpen className="text-primary-600 mr-3 flex-shrink-0" size={24} />
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Documentos de Inscripción
+                </h2>
+              </div>
+
+              {enrollment.status === 'pending_payment' ? (
+                <div className="flex items-start gap-3 p-3 bg-green-50 border border-green-200 rounded-lg mb-4">
+                  <CheckCircle className="text-green-600 flex-shrink-0 mt-0.5" size={18} />
+                  <p className="text-sm text-green-800">
+                    Todos tus documentos han sido aprobados. Procede al pago de inscripción.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-600 mb-4">
+                  Sube los siguientes documentos para continuar con tu inscripción:
+                </p>
+              )}
+
+              <div className="space-y-4">
+                {ENROLLMENT_DOC_TYPES.map(({ key, label }) => {
+                  const uploaded = enrollment.documents?.find((d) => d.document_type === key);
+                  const canUpload = !uploaded || uploaded.status === 'rejected';
+
+                  return (
+                    <div
+                      key={key}
+                      className="border border-gray-200 rounded-lg p-4"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="font-medium text-gray-900">{label}</p>
+                        {uploaded && (
+                          <Badge
+                            variant={
+                              uploaded.status === 'approved'
+                                ? 'success'
+                                : uploaded.status === 'rejected'
+                                ? 'danger'
+                                : 'warning'
+                            }
+                          >
+                            {uploaded.status_display}
+                          </Badge>
+                        )}
+                      </div>
+
+                      {uploaded?.reviewer_notes && uploaded.status === 'rejected' && (
+                        <p className="text-sm text-red-600 mb-2">
+                          <span className="font-medium">Motivo de rechazo:</span>{' '}
+                          {uploaded.reviewer_notes}
+                        </p>
+                      )}
+
+                      {uploaded && uploaded.status !== 'rejected' ? (
+                        <p className="text-sm text-gray-500">
+                          Archivo: {uploaded.file_name}
+                        </p>
+                      ) : (
+                        <div className="flex items-center gap-3 mt-2">
+                          <input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            onChange={(e) =>
+                              setEnrollDocFiles((prev) => ({
+                                ...prev,
+                                [key]: e.target.files?.[0] ?? null,
+                              }))
+                            }
+                            disabled={!canUpload}
+                            className="flex-1 text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 cursor-pointer"
+                          />
+                          <Button
+                            size="sm"
+                            onClick={() => handleUploadEnrollDoc(key)}
+                            disabled={!enrollDocFiles[key] || uploadEnrollDocMutation.isPending}
+                            isLoading={
+                              uploadEnrollDocMutation.isPending &&
+                              uploadEnrollDocMutation.variables?.docType === key
+                            }
+                          >
+                            <Upload size={14} className="mr-1" />
+                            Subir
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
+
+          {/* Pago de inscripción */}
+          {enrollment.status === 'pending_payment' && (
+            <Card>
+              <div className="flex items-center mb-5">
+                <CreditCard className="text-primary-600 mr-3 flex-shrink-0" size={24} />
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Pago de Inscripción
+                </h2>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-5">
+                <p className="text-blue-900 font-medium">Concepto: Pago de Inscripción</p>
+                {enrollment.group && (
+                  <p className="text-sm text-blue-700 mt-1">
+                    Grupo: {enrollment.group} | Horario: {enrollment.schedule}
+                  </p>
+                )}
+              </div>
+
+              {isEnrollPaymentLoading && (
+                <p className="text-sm text-gray-500">Cargando información de pago...</p>
+              )}
+
+              {!isEnrollPaymentLoading && !enrollmentPayment && (
+                <div className="text-center py-2">
+                  <p className="text-sm text-gray-600 mb-4">
+                    Genera tu ficha de pago para obtener el número de referencia bancaria.
+                  </p>
+                  <Button
+                    onClick={() => createEnrollPaymentMutation.mutate()}
+                    isLoading={createEnrollPaymentMutation.isPending}
+                  >
+                    Generar Ficha de Pago
+                  </Button>
+                </div>
+              )}
+
+              {!isEnrollPaymentLoading && enrollmentPayment && (
+                <div className="space-y-4">
+                  {enrollmentPayment.status === 'rejected' && (
+                    <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+                      <XCircle className="text-red-600 flex-shrink-0 mt-0.5" size={18} />
+                      <div>
+                        <p className="font-medium text-red-900">Comprobante rechazado</p>
+                        {enrollmentPayment.validation_notes && (
+                          <p className="text-sm text-red-700 mt-1">
+                            {enrollmentPayment.validation_notes}
+                          </p>
+                        )}
+                        <p className="text-sm text-red-600 mt-1">
+                          Por favor sube un nuevo comprobante.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <p className="text-xs text-gray-500 mb-1">Número de referencia</p>
+                    <p className="text-lg font-mono font-bold text-gray-900 tracking-wider">
+                      {enrollmentPayment.receipt_number}
+                    </p>
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    onClick={handleDownloadEnrollSlip}
+                    isLoading={isDownloadingEnrollSlip}
+                    disabled={isDownloadingEnrollSlip}
+                  >
+                    <Download size={18} className="mr-2" />
+                    Descargar Ficha de Pago
+                  </Button>
+
+                  {(enrollmentPayment.status === 'rejected' ||
+                    (enrollmentPayment.status === 'pending' &&
+                      enrollment.status === 'pending_payment')) && (
+                    <div className="border-t pt-4 space-y-3">
+                      <h4 className="font-medium text-gray-900">
+                        {enrollmentPayment.status === 'rejected'
+                          ? 'Subir nuevo comprobante'
+                          : 'Subir comprobante de pago'}
+                      </h4>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Fecha en que realizaste el pago{' '}
+                          <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={enrollmentPaymentDate}
+                          onChange={(e) => setEnrollmentPaymentDate(e.target.value)}
+                          min={enrollmentPayment.created_at.slice(0, 10)}
+                          max={new Date().toISOString().split('T')[0]}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Archivo del comprobante{' '}
+                          <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          onChange={(e) =>
+                            setEnrollmentReceiptFile(e.target.files?.[0] ?? null)
+                          }
+                          className="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 cursor-pointer"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          PDF, JPG o PNG — máx. 5 MB
+                        </p>
+                      </div>
+
+                      <Button
+                        onClick={handleUploadEnrollReceipt}
+                        isLoading={uploadEnrollReceiptMutation.isPending}
+                        disabled={!enrollmentReceiptFile || !enrollmentPaymentDate}
+                      >
+                        <Upload size={18} className="mr-2" />
+                        Enviar Comprobante
+                      </Button>
+                    </div>
+                  )}
+
+                  {enrollmentPayment.status === 'pending' &&
+                    enrollment.status === 'pending_payment' &&
+                    enrollmentPayment.receipt_file && (
+                    <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <CheckCircle className="text-yellow-600 flex-shrink-0 mt-0.5" size={16} />
+                      <p className="text-sm text-yellow-800">
+                        Tu comprobante fue enviado y está siendo revisado por el equipo de
+                        finanzas.
+                      </p>
+                    </div>
+                  )}
+
+                  {enrollmentPayment.status === 'validated' && (
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <CheckCircle className="text-green-600 flex-shrink-0 mt-0.5" size={18} />
+                        <div>
+                          <p className="font-medium text-green-900">Pago validado</p>
+                          <p className="text-sm text-green-700 mt-0.5">
+                            Tu pago fue confirmado. ¡Tu inscripción está en proceso de finalización!
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="success"
+                        onClick={handleDownloadEnrollReceipt}
+                        isLoading={isDownloadingEnrollReceipt}
+                        disabled={isDownloadingEnrollReceipt}
+                      >
+                        <Download size={18} className="mr-2" />
+                        Descargar Recibo Oficial
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </Card>
+          )}
+        </>
       )}
 
       {application.status === 'rejected' && (

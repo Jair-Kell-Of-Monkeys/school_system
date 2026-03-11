@@ -14,6 +14,9 @@ class Enrollment(models.Model):
     """
 
     STATUS_CHOICES = [
+        ('pending_documents', 'Documentos Pendientes'),
+        ('pending_payment', 'Pago Pendiente'),
+        ('enrolled', 'Inscrito'),
         ('active', 'Activo'),
         ('cancelled', 'Cancelado'),
         ('graduated', 'Graduado'),
@@ -109,6 +112,8 @@ class EnrollmentDocument(models.Model):
     """
 
     DOCUMENT_TYPE_CHOICES = [
+        ('numero_seguridad_social', 'Número de Seguridad Social'),
+        ('certificado_bachillerato', 'Certificado de Bachillerato'),
         ('acta_nacimiento', 'Acta de Nacimiento'),
         ('curp', 'CURP'),
         ('comprobante_domicilio', 'Comprobante de Domicilio'),

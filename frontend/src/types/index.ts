@@ -239,3 +239,63 @@ export interface Announcement {
   is_open: boolean;
   published_at: string;
 }
+
+export interface EnrollmentDocument {
+  id: string;
+  document_type: string;
+  document_type_display: string;
+  file_url: string | null;
+  file_name: string;
+  file_size: number | null;
+  status: string;
+  status_display: string;
+  reviewer_notes: string | null;
+  reviewed_by: string | null;
+  reviewed_by_email: string | null;
+  reviewed_at: string | null;
+  uploaded_at: string;
+}
+
+export interface Enrollment {
+  id: string;
+  matricula: string;
+  status: string;
+  status_display: string;
+  student_name: string;
+  student_curp: string;
+  program_name: string;
+  program_code: string;
+  period_name: string;
+  institutional_email: string | null;
+  enrolled_at: string | null;
+  created_at: string;
+}
+
+export interface EnrollmentDetail extends Enrollment {
+  student: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    curp: string;
+    email: string | null;
+    user_email: string;
+    phone: string;
+    institutional_email: string | null;
+  };
+  program: {
+    id: number;
+    code: string;
+    name: string;
+  };
+  period: {
+    id: number;
+    name: string;
+    start_date: string;
+    end_date: string;
+  };
+  pre_enrollment: string | null;
+  group: string | null;
+  schedule: string | null;
+  documents: EnrollmentDocument[];
+  updated_at: string;
+}

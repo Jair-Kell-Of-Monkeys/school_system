@@ -160,11 +160,34 @@ class PaymentViewSet(viewsets.ModelViewSet):
         payment.validation_notes = serializer.validated_data.get('notes', '')
         payment.save()
 
-        # Actualizar estado de pre-enrollment
+        # Actualizar estado de pre-enrollment o enrollment según tipo de pago
         pre_enrollment = payment.pre_enrollment
-        if pre_enrollment.status == 'payment_submitted':
-            pre_enrollment.status = 'payment_validated'
-            pre_enrollment.save()
+        if payment.payment_type == 'inscripcion':
+            # Si es pago de inscripción, actualizar el enrollment asociado
+            try:
+                from apps.enrollments.models import Enrollment
+                enrollment = Enrollment.objects.get(pre_enrollment=pre_enrollment)
+                enrollment.status = 'enrolled'
+                enrollment.save()
+                logger.info(
+                    '[PaymentViewSet.validate] Enrollment %s marcado como enrolled',
+                    enrollment.id,
+                )
+                from apps.enrollments.tasks import send_enrollment_completed_email_task
+                try:
+                    send_enrollment_completed_email_task.delay(str(enrollment.id))
+                except Exception:
+                    from apps.enrollments.email_service import send_enrollment_completed_email
+                    send_enrollment_completed_email(enrollment)
+            except Exception as exc:
+                logger.error(
+                    '[PaymentViewSet.validate] Error actualizando enrollment: %s', exc
+                )
+        else:
+            # Pago de examen: actualizar estado de pre-enrollment
+            if pre_enrollment.status == 'payment_submitted':
+                pre_enrollment.status = 'payment_validated'
+                pre_enrollment.save()
 
         return Response(
             PaymentDetailSerializer(payment, context={'request': request}).data

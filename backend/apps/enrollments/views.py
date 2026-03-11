@@ -32,13 +32,14 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
     ViewSet para gestionar inscripciones formales.
 
     Endpoints:
-      GET    /api/enrollments/                    - listar inscripciones
-      POST   /api/enrollments/                    - crear inscripción desde pre-inscripción aceptada
-      GET    /api/enrollments/{id}/               - detalle de inscripción
-      PATCH  /api/enrollments/{id}/               - actualizar grupo/horario/estado
-      POST   /api/enrollments/{id}/upload-document/ - subir documento
-      POST   /api/enrollments/{id}/review-document/{doc_id}/ - revisar documento
-      GET    /api/enrollments/my-enrollment/      - inscripción del alumno autenticado
+      GET    /api/enrollments/enrollments/                       - listar inscripciones
+      POST   /api/enrollments/enrollments/                       - crear inscripción desde pre-inscripción aceptada
+      GET    /api/enrollments/enrollments/{id}/                  - detalle de inscripción
+      PATCH  /api/enrollments/enrollments/{id}/                  - actualizar grupo/horario/estado
+      POST   /api/enrollments/enrollments/{id}/upload-document/  - subir documento
+      POST   /api/enrollments/enrollments/{id}/review-document/{doc_id}/ - revisar documento
+      POST   /api/enrollments/enrollments/{id}/confirm/          - confirmar inscripción con grupo y horario
+      GET    /api/enrollments/enrollments/my-enrollment/         - inscripción del alumno autenticado
     """
 
     permission_classes = [IsAuthenticated]
@@ -93,7 +94,7 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
         return qs
 
     def get_permissions(self):
-        if self.action in ['create', 'partial_update']:
+        if self.action in ['create', 'partial_update', 'confirm']:
             return [IsAdminOrServiciosEscolares()]
         return super().get_permissions()
 
@@ -103,13 +104,8 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         """
-        POST /api/enrollments/
+        POST /api/enrollments/enrollments/
         Body: { "pre_enrollment_id": "<uuid>", "group": "...", "schedule": "..." }
-
-        1. Valida que la pre-inscripción exista y esté en estado 'accepted'.
-        2. Genera matrícula única.
-        3. Genera correo institucional único y lo guarda en students.institutional_email.
-        4. Crea el registro de inscripción.
         """
         serializer = EnrollmentCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -118,7 +114,6 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
         group = serializer.validated_data.get('group', '') or None
         schedule = serializer.validated_data.get('schedule', '') or None
 
-        # Verificar que la pre-inscripción exista y esté aceptada
         try:
             pre_enrollment = PreEnrollment.objects.select_related(
                 'student', 'program', 'period'
@@ -140,7 +135,6 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Verificar que no exista ya una inscripción para esta pre-inscripción
         if Enrollment.objects.filter(pre_enrollment=pre_enrollment).exists():
             return Response(
                 {'error': 'Ya existe una inscripción para esta pre-inscripción'},
@@ -151,7 +145,6 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
         program = pre_enrollment.program
         period = pre_enrollment.period
 
-        # Generar matrícula única
         try:
             matricula = generate_matricula(
                 program_code=program.code,
@@ -159,39 +152,24 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
             )
         except ValueError as exc:
             logger.error('[EnrollmentViewSet.create] Error generando matrícula: %s', exc)
-            return Response(
-                {'error': str(exc)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            return Response({'error': str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Generar y guardar correo institucional en students.institutional_email
         try:
             if not student.institutional_email:
                 institutional_email = generate_institutional_email(student)
                 student.institutional_email = institutional_email
                 student.save(update_fields=['institutional_email'])
-                logger.info(
-                    '[EnrollmentViewSet.create] Correo institucional asignado: %s → %s',
-                    student.pk,
-                    institutional_email,
-                )
         except ValueError as exc:
-            logger.error(
-                '[EnrollmentViewSet.create] Error generando correo institucional: %s', exc
-            )
-            return Response(
-                {'error': str(exc)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            logger.error('[EnrollmentViewSet.create] Error generando correo institucional: %s', exc)
+            return Response({'error': str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Crear inscripción
         enrollment = Enrollment(
             student=student,
             program=program,
             period=period,
             pre_enrollment=pre_enrollment,
             matricula=matricula,
-            status='active',
+            status='pending_documents',
             group=group,
             schedule=schedule,
             enrolled_at=timezone.now(),
@@ -200,13 +178,10 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
 
         logger.info(
             '[EnrollmentViewSet.create] Inscripción creada: matricula=%s student=%s',
-            matricula,
-            student.pk,
+            matricula, student.pk,
         )
 
-        response_serializer = EnrollmentDetailSerializer(
-            enrollment, context={'request': request}
-        )
+        response_serializer = EnrollmentDetailSerializer(enrollment, context={'request': request})
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
     # ------------------------------------------------------------------
@@ -221,12 +196,11 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
     )
     def upload_document(self, request, pk=None):
         """
-        POST /api/enrollments/{id}/upload-document/
+        POST /api/enrollments/enrollments/{id}/upload-document/
         Body (multipart): document_type, file
         """
         enrollment = self.get_object()
 
-        # Alumnos solo pueden subir documentos a su propia inscripción
         if request.user.role == 'alumno':
             if (
                 not hasattr(request.user, 'student_profile')
@@ -236,6 +210,10 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
                     {'error': 'No tiene permiso para subir documentos a esta inscripción'},
                     status=status.HTTP_403_FORBIDDEN,
                 )
+
+        if enrollment.status not in ('pending_documents',):
+            # Allow re-upload if a doc was rejected regardless of enrollment status
+            pass  # We'll check at document level
 
         serializer = EnrollmentDocumentUploadSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -279,7 +257,7 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
         )
 
     # ------------------------------------------------------------------
-    # REVIEW DOCUMENT
+    # REVIEW DOCUMENT (staff)
     # ------------------------------------------------------------------
 
     @action(
@@ -291,7 +269,7 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
     )
     def review_document(self, request, pk=None, doc_id=None):
         """
-        POST /api/enrollments/{id}/review-document/{doc_id}/
+        POST /api/enrollments/enrollments/{id}/review-document/{doc_id}/
         Body: { "action": "approve" | "reject", "reviewer_notes": "..." }
         """
         enrollment = self.get_object()
@@ -308,15 +286,84 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
 
         action_type = serializer.validated_data['action']
+        reviewer_notes = serializer.validated_data.get('reviewer_notes', '') or ''
         document.status = 'approved' if action_type == 'approve' else 'rejected'
-        document.reviewer_notes = serializer.validated_data.get('reviewer_notes', '')
+        document.reviewer_notes = reviewer_notes
         document.reviewed_by = request.user
         document.reviewed_at = timezone.now()
         document.save()
 
+        # Send rejection notification email
+        if action_type == 'reject' and reviewer_notes:
+            from .tasks import send_enrollment_document_rejected_email_task
+            try:
+                send_enrollment_document_rejected_email_task.delay(str(document.id), reviewer_notes)
+            except Exception:
+                from .email_service import send_enrollment_document_rejected_email
+                send_enrollment_document_rejected_email(document, reviewer_notes)
+
         return Response({
             'message': f"Documento {'aprobado' if action_type == 'approve' else 'rechazado'} correctamente",
             'document': EnrollmentDocumentSerializer(document, context={'request': request}).data,
+        })
+
+    # ------------------------------------------------------------------
+    # CONFIRM ENROLLMENT (staff assigns group/schedule + moves to pending_payment)
+    # ------------------------------------------------------------------
+
+    @action(
+        detail=True,
+        methods=['post'],
+        permission_classes=[IsAdminOrServiciosEscolares],
+        parser_classes=[JSONParser],
+        url_path='confirm',
+    )
+    def confirm(self, request, pk=None):
+        """
+        POST /api/enrollments/enrollments/{id}/confirm/
+        Body: { "group": "...", "schedule": "..." }
+
+        Valida que todos los documentos estén aprobados, asigna grupo y horario
+        y mueve el enrollment a estado pending_payment.
+        """
+        enrollment = self.get_object()
+
+        if enrollment.status != 'pending_documents':
+            return Response(
+                {'error': 'La inscripción debe estar en estado pending_documents para confirmar'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        group = request.data.get('group', '').strip()
+        schedule = request.data.get('schedule', '').strip()
+
+        if not group or not schedule:
+            return Response(
+                {'error': 'Los campos group y schedule son requeridos'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        docs = list(enrollment.documents.values_list('status', flat=True))
+        if not docs:
+            return Response(
+                {'error': 'El alumno no ha subido ningún documento de inscripción'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not all(s == 'approved' for s in docs):
+            return Response(
+                {'error': 'Todos los documentos deben estar aprobados antes de confirmar'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        enrollment.group = group
+        enrollment.schedule = schedule
+        enrollment.status = 'pending_payment'
+        enrollment.save()
+
+        serializer = EnrollmentDetailSerializer(enrollment, context={'request': request})
+        return Response({
+            'message': 'Inscripción confirmada. El alumno debe realizar el pago de inscripción.',
+            'enrollment': serializer.data,
         })
 
     # ------------------------------------------------------------------
@@ -326,8 +373,9 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='my-enrollment')
     def my_enrollment(self, request):
         """
-        GET /api/enrollments/my-enrollment/
-        Devuelve la inscripción activa del alumno autenticado.
+        GET /api/enrollments/enrollments/my-enrollment/
+        Devuelve la(s) inscripción(es) del alumno autenticado.
+        También accesible a aspirantes que ya tienen enrollment.
         """
         if not hasattr(request.user, 'student_profile'):
             return Response(
@@ -337,7 +385,7 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
 
         student = request.user.student_profile
         enrollments = (
-            Enrollment.objects.select_related('student', 'program', 'period')
+            Enrollment.objects.select_related('student', 'student__user', 'program', 'period')
             .prefetch_related('documents')
             .filter(student=student)
             .order_by('-enrolled_at')
@@ -345,12 +393,8 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
 
         page = self.paginate_queryset(enrollments)
         if page is not None:
-            serializer = EnrollmentDetailSerializer(
-                page, many=True, context={'request': request}
-            )
+            serializer = EnrollmentDetailSerializer(page, many=True, context={'request': request})
             return self.get_paginated_response(serializer.data)
 
-        serializer = EnrollmentDetailSerializer(
-            enrollments, many=True, context={'request': request}
-        )
+        serializer = EnrollmentDetailSerializer(enrollments, many=True, context={'request': request})
         return Response(serializer.data)
