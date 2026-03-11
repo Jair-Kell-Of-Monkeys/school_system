@@ -331,11 +331,14 @@ export const MyApplication = () => {
       paymentStatus = 'pending';
     }
 
-    const examStatus: TimelineStep['status'] = [
-      'exam_scheduled', 'exam_completed', 'accepted', 'rejected',
-    ].includes(appStatus)
-      ? 'completed'
-      : 'pending';
+    let examStatus: TimelineStep['status'];
+    if (['exam_completed', 'accepted', 'rejected'].includes(appStatus)) {
+      examStatus = 'completed';
+    } else if (appStatus === 'exam_scheduled') {
+      examStatus = 'current';
+    } else {
+      examStatus = 'pending';
+    }
 
     let resultStatus: TimelineStep['status'];
     if (appStatus === 'accepted')      resultStatus = 'completed';
@@ -518,6 +521,21 @@ export const MyApplication = () => {
               <p className="text-sm text-yellow-700 mt-1">
                 Sube todos los documentos requeridos y envía tu solicitud para comenzar el
                 proceso de revisión.
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {application.status === 'exam_scheduled' && (
+        <Card className="border-l-4 border-blue-500 bg-blue-50">
+          <div className="flex items-start">
+            <CheckCircle className="text-blue-600 mr-3 mt-1 flex-shrink-0" size={24} />
+            <div>
+              <h3 className="font-semibold text-blue-900">¡Examen Asignado!</h3>
+              <p className="text-sm text-blue-700 mt-1">
+                Tu fecha de examen ha sido confirmada. Consulta los detalles a continuación y
+                preséntate con identificación oficial.
               </p>
             </div>
           </div>

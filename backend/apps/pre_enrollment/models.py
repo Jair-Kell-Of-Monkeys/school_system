@@ -69,6 +69,7 @@ class PreEnrollment(models.Model):
         verbose_name='Estado'
     )
     
+
     # Información del examen
     exam_date = models.DateTimeField(
         blank=True,

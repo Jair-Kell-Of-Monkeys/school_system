@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { ROUTES, ROLES } from '@/config/constants';
-import { Home, Users, FileText, DollarSign, LogOut, Menu, X, UserCog, GraduationCap, BookOpen } from 'lucide-react';
+import { Home, Users, FileText, DollarSign, LogOut, Menu, X, UserCog, GraduationCap, BookOpen, ClipboardList } from 'lucide-react';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -31,6 +31,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         { icon: UserCog, label: 'Encargados', path: ROUTES.STAFF },
         { icon: GraduationCap, label: 'Estudiantes', path: ROUTES.STUDENTS },
         { icon: FileText, label: 'Pre-inscripciones', path: ROUTES.PRE_ENROLLMENTS },
+        { icon: ClipboardList, label: 'Exámenes', path: ROUTES.EXAM_SESSIONS },
         { icon: BookOpen, label: 'Inscripciones', path: ROUTES.ENROLLMENTS },
       ];
     }
@@ -40,6 +41,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         ...baseItems,
         { icon: GraduationCap, label: 'Mis Estudiantes', path: ROUTES.STUDENTS },
         { icon: FileText, label: 'Pre-inscripciones', path: ROUTES.PRE_ENROLLMENTS },
+        { icon: ClipboardList, label: 'Exámenes', path: ROUTES.EXAM_SESSIONS },
         { icon: BookOpen, label: 'Inscripciones', path: ROUTES.ENROLLMENTS },
       ];
     }

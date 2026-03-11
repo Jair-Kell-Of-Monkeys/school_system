@@ -29,4 +29,5 @@ export const ROUTES = {
   PERIODS: '/academic/periods',
   STAFF: '/staff',
   ENROLLMENTS: '/enrollments',
+  EXAM_SESSIONS: '/exam-sessions',
 } as const;

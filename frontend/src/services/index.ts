@@ -5,3 +5,4 @@ export { paymentsService } from './payments/paymentsService';
 export { aspirantService } from './aspirant/aspirantService';
 export { authService } from './auth/authService';
 export { enrollmentsService } from './enrollments/enrollmentsService';
+export { examsService } from './exams/examsService';

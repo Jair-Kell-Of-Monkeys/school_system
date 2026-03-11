@@ -42,6 +42,7 @@ LOCAL_APPS = [
     'apps.students',
     'apps.pre_enrollment',
     'apps.enrollments',
+    'apps.exams',
     'apps.payments',
     'apps.credentials',
     'apps.notifications',

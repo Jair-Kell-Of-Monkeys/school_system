@@ -9,6 +9,7 @@ import { Students } from '@/pages/Students/Students';
 import { PreEnrollments } from '@/pages/PreEnrollments/PreEnrollments';
 import { Payments } from '@/pages/Payments/Payments';
 import { Enrollments } from '@/pages/Enrollments/Enrollments';
+import { ExamSessions } from '@/pages/ExamSessions/ExamSessions';
 import { DashboardLayout } from '@/components/templates/DashboardLayout/DashboardLayout';
 import { MyApplication } from '@/pages/MyApplication/MyApplication';
 import { ProtectedRoute } from '@/components/organisms/ProtectedRoute/ProtectedRoute';
@@ -119,6 +120,24 @@ function App() {
               >
                 <DashboardLayout>
                   <Enrollments />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Exámenes - Jefa, Admin y Encargados */}
+          <Route
+            path={ROUTES.EXAM_SESSIONS}
+            element={
+              <ProtectedRoute
+                allowedRoles={[
+                  ROLES.ADMIN,
+                  ROLES.JEFE_SERVICIOS,
+                  ROLES.SERVICIOS_ESCOLARES,
+                ]}
+              >
+                <DashboardLayout>
+                  <ExamSessions />
                 </DashboardLayout>
               </ProtectedRoute>
             }

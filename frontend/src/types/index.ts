@@ -240,6 +240,60 @@ export interface Announcement {
   published_at: string;
 }
 
+export interface ExamVenue {
+  id: string;
+  program: number;
+  program_name: string;
+  program_code: string;
+  building: string;
+  room: string;
+  capacity: number;
+  location_display: string;
+  created_at: string;
+}
+
+export interface ExamSession {
+  id: string;
+  name: string;
+  period: number;
+  period_name: string;
+  exam_date: string;
+  exam_time: string;
+  mode: string;
+  passing_score: number;
+  status: string;
+  status_display: string;
+  created_by_email: string | null;
+  venue_count: number;
+  total_capacity: number;
+  created_at: string;
+}
+
+export interface ExamSessionDetail extends ExamSession {
+  venues: ExamVenue[];
+  updated_at: string;
+}
+
+export interface ExamAspirant {
+  id: string;
+  student_name: string;
+  student_curp: string;
+  program_name: string;
+  program_code: string;
+  exam_location: string | null;
+  exam_date: string | null;
+  exam_score: string | null;
+  status: string;
+  status_display: string;
+}
+
+export interface AspirantCount {
+  program_id: number;
+  program_code: string;
+  program_name: string;
+  aspirant_count: number;
+}
+
 export interface EnrollmentDocument {
   id: string;
   document_type: string;
