@@ -14,13 +14,17 @@ class Enrollment(models.Model):
     """
 
     STATUS_CHOICES = [
-        ('pending_documents', 'Documentos Pendientes'),
+        ('pending_docs', 'Documentos Pendientes'),
+        ('docs_submitted', 'Documentos Enviados'),
+        ('docs_approved', 'Documentos Aprobados'),
         ('pending_payment', 'Pago Pendiente'),
+        ('payment_submitted', 'Pago Enviado'),
+        ('payment_validated', 'Pago Validado'),
         ('enrolled', 'Inscrito'),
         ('active', 'Activo'),
-        ('cancelled', 'Cancelado'),
+        ('inactive', 'Inactivo'),
+        ('withdrawn', 'Baja'),
         ('graduated', 'Graduado'),
-        ('suspended', 'Suspendido'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

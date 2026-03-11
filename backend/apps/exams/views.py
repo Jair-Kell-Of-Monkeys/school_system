@@ -1,5 +1,6 @@
 # apps/exams/views.py
 import logging
+from datetime import datetime, timezone as dt_tz
 
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
@@ -245,10 +246,9 @@ class ExamSessionViewSet(viewsets.ModelViewSet):
         session = self.get_object()
 
         venue_programs = list(session.venues.values_list('program_id', flat=True))
-        exam_datetime = timezone.make_aware(
-            timezone.datetime.combine(session.exam_date, session.exam_time),
-            timezone.get_current_timezone(),
-        )
+        exam_datetime = datetime.combine(
+            session.exam_date, session.exam_time
+        ).replace(tzinfo=dt_tz.utc)
         qs = (
             PreEnrollment.objects.select_related(
                 'student', 'student__user', 'program', 'period',
@@ -382,7 +382,7 @@ class ExamSessionViewSet(viewsets.ModelViewSet):
                                 period=period,
                                 pre_enrollment=pre_enrollment,
                                 matricula=matricula,
-                                status='pending_documents',
+                                status='pending_docs',
                                 enrolled_at=timezone.now(),
                             )
                             enrollment.save()

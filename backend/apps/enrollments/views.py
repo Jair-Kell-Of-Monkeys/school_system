@@ -169,7 +169,7 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
             period=period,
             pre_enrollment=pre_enrollment,
             matricula=matricula,
-            status='pending_documents',
+            status='pending_docs',
             group=group,
             schedule=schedule,
             enrolled_at=timezone.now(),
@@ -211,7 +211,7 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
-        if enrollment.status not in ('pending_documents',):
+        if enrollment.status not in ('pending_docs',):
             # Allow re-upload if a doc was rejected regardless of enrollment status
             pass  # We'll check at document level
 
@@ -328,9 +328,9 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
         """
         enrollment = self.get_object()
 
-        if enrollment.status != 'pending_documents':
+        if enrollment.status != 'pending_docs':
             return Response(
-                {'error': 'La inscripción debe estar en estado pending_documents para confirmar'},
+                {'error': 'La inscripción debe estar en estado pending_docs para confirmar'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

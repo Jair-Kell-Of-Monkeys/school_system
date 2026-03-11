@@ -2,6 +2,7 @@
 Tareas Celery para el módulo de exámenes de admisión.
 """
 import logging
+from datetime import datetime, timezone as dt_tz
 from celery import shared_task
 from django.utils import timezone
 
@@ -25,11 +26,13 @@ def assign_exam_task(self, exam_session_id: str) -> dict:
             'venues__program'
         ).get(id=exam_session_id)
 
-        # Build aware datetime combining session date + time
-        exam_datetime = timezone.make_aware(
-            timezone.datetime.combine(session.exam_date, session.exam_time),
-            timezone.get_current_timezone(),
-        )
+        # Combinar fecha + hora sin conversión de zona horaria.
+        # Se marca como UTC para que el ORM lo acepte con USE_TZ=True,
+        # pero el valor en sí ya representa la hora local tal como la ingresó
+        # la jefa (el serializador usa DATETIME_FORMAT sin sufijo de zona).
+        exam_datetime = datetime.combine(
+            session.exam_date, session.exam_time
+        ).replace(tzinfo=dt_tz.utc)
 
         assigned_count = 0
 
