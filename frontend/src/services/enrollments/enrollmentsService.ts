@@ -80,6 +80,22 @@ export const enrollmentsService = {
     window.URL.revokeObjectURL(url);
   },
 
+  // Descargar comprobante de inscripción (alumno inscrito)
+  async downloadReceipt(enrollmentId: string): Promise<void> {
+    const response = await axios.get(
+      `/enrollments/enrollments/${enrollmentId}/download-receipt/`,
+      { responseType: 'blob' }
+    );
+    const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `comprobante-inscripcion.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
+
   // Crear inscripción desde pre-inscripción aceptada (staff)
   async createEnrollment(
     preEnrollmentId: string,

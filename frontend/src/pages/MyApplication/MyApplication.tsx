@@ -45,6 +45,7 @@ export const MyApplication = () => {
   const [enrollmentPaymentDate, setEnrollmentPaymentDate] = useState('');
   const [isDownloadingEnrollSlip, setIsDownloadingEnrollSlip] = useState(false);
   const [isDownloadingEnrollReceipt, setIsDownloadingEnrollReceipt] = useState(false);
+  const [isDownloadingComprobante, setIsDownloadingComprobante] = useState(false);
   const [enrollDocFiles, setEnrollDocFiles] = useState<Record<string, File | null>>({});
 
   // ── Queries ──────────────────────────────────────────────────────────────
@@ -269,6 +270,17 @@ export const MyApplication = () => {
       alert('Error al descargar el recibo. Intenta de nuevo.');
     } finally {
       setIsDownloadingEnrollReceipt(false);
+    }
+  };
+
+  const handleDownloadComprobante = async (enrollmentId: string) => {
+    setIsDownloadingComprobante(true);
+    try {
+      await enrollmentsService.downloadReceipt(enrollmentId);
+    } catch {
+      alert('Error al descargar el comprobante. Intenta de nuevo.');
+    } finally {
+      setIsDownloadingComprobante(false);
     }
   };
 
@@ -770,50 +782,72 @@ export const MyApplication = () => {
       {/* ── Sección de Inscripción Formal ───────────────────────────────── */}
       {application.status === 'accepted' && enrollment && (
         <>
-          {/* Inscripción completada */}
+          {/* Inscripción completada — pantalla de bienvenida institucional */}
           {enrollment.status === 'enrolled' && (
-            <Card className="border-l-4 border-green-600 bg-green-50">
-              <div className="text-center py-6">
-                <GraduationCap className="mx-auto text-green-600 mb-4" size={64} />
-                <h2 className="text-2xl font-bold text-green-900">
-                  ¡Inscripción completada!
+            <div className="space-y-0 rounded-xl overflow-hidden shadow-lg border border-green-300">
+              {/* Banner superior */}
+              <div className="bg-gradient-to-r from-green-700 to-green-500 px-8 py-8 text-white text-center">
+                <GraduationCap className="mx-auto mb-3" size={56} />
+                <h2 className="text-3xl font-bold tracking-tight">
+                  ¡Bienvenido al Sistema Universitario!
                 </h2>
-                <p className="text-green-700 mt-2">
-                  Ya eres alumno oficial de {application.program?.name}
+                <p className="mt-2 text-green-100 text-lg">
+                  Tu inscripción ha sido completada exitosamente.
                 </p>
-                <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto text-left">
-                  <div className="bg-white rounded-lg p-4 border border-green-200">
+                <p className="mt-1 text-green-200 text-sm">
+                  {enrollment.period?.name ?? ''} — {enrollment.program?.name ?? application.program?.name}
+                </p>
+              </div>
+
+              {/* Tarjeta de credenciales */}
+              <div className="bg-white px-8 py-6">
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
+                  Credenciales institucionales
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                     <p className="text-xs text-gray-500 mb-1">Matrícula</p>
-                    <p className="text-lg font-mono font-bold text-gray-900">
+                    <p className="text-xl font-mono font-bold text-gray-900 tracking-widest">
                       {enrollment.matricula}
                     </p>
                   </div>
-                  {enrollment.student?.institutional_email && (
-                    <div className="bg-white rounded-lg p-4 border border-green-200">
-                      <p className="text-xs text-gray-500 mb-1">Correo institucional</p>
-                      <p className="text-sm font-medium text-gray-900 break-all">
-                        {enrollment.student.institutional_email}
-                      </p>
-                    </div>
-                  )}
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <p className="text-xs text-gray-500 mb-1">Correo institucional</p>
+                    <p className="text-sm font-medium text-gray-900 break-all">
+                      {enrollment.student?.institutional_email ?? `${enrollment.matricula}@universidad.edu.mx`}
+                    </p>
+                  </div>
                   {enrollment.group && (
-                    <div className="bg-white rounded-lg p-4 border border-green-200">
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                       <p className="text-xs text-gray-500 mb-1">Grupo</p>
                       <p className="font-semibold text-gray-900">{enrollment.group}</p>
                     </div>
                   )}
                   {enrollment.schedule && (
-                    <div className="bg-white rounded-lg p-4 border border-green-200">
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                       <p className="text-xs text-gray-500 mb-1">Horario</p>
                       <p className="font-semibold text-gray-900">{enrollment.schedule}</p>
                     </div>
                   )}
                 </div>
-                <p className="text-sm text-green-700 mt-4">
-                  Recibirás un correo con los detalles de activación de tu correo institucional.
+
+                <div className="mt-6 flex flex-col sm:flex-row items-center gap-3">
+                  <Button
+                    variant="success"
+                    onClick={() => handleDownloadComprobante(enrollment.id)}
+                    isLoading={isDownloadingComprobante}
+                    disabled={isDownloadingComprobante}
+                  >
+                    <Download size={18} className="mr-2" />
+                    Descargar Comprobante de Inscripción
+                  </Button>
+                </div>
+
+                <p className="text-xs text-gray-400 mt-4">
+                  Conserva tu comprobante. Para activar tu correo institucional, acude a Servicios Escolares con identificación oficial.
                 </p>
               </div>
-            </Card>
+            </div>
           )}
 
           {/* Documentos de inscripción */}

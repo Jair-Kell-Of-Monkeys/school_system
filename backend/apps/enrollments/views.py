@@ -1,5 +1,6 @@
 # apps/enrollments/views.py
 import csv
+import io
 import logging
 from django.conf import settings
 from django.http import HttpResponse
@@ -225,10 +226,6 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
-        if enrollment.status not in ('pending_docs',):
-            # Allow re-upload if a doc was rejected regardless of enrollment status
-            pass  # We'll check at document level
-
         serializer = EnrollmentDocumentUploadSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -237,7 +234,7 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
         mime_type = uploaded_file.content_type if uploaded_file else None
 
         existing = enrollment.documents.filter(document_type=document_type).first()
-        # Placeholder: registro sin archivo (creado al crear la inscripción)
+        # Placeholder: registro sin archivo (creado automáticamente al inscribir)
         is_placeholder = existing and not existing.file_path
         is_rejected = existing and existing.status == 'rejected'
 
@@ -260,6 +257,12 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
             existing.mime_type = mime_type
             existing.save()
             document = existing
+
+            # Al re-subir un doc rechazado, devolver la inscripción a pending_docs
+            # para que el encargado sepa que hay documentos nuevos por revisar
+            if is_rejected and enrollment.status in ('docs_submitted', 'pending_docs'):
+                enrollment.status = 'pending_docs'
+                enrollment.save(update_fields=['status', 'updated_at'])
         else:
             document = serializer.save(enrollment=enrollment)
             if document.file_path:
@@ -467,6 +470,128 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
             ])
 
         return http_response
+
+    # ------------------------------------------------------------------
+    # DOWNLOAD RECEIPT (alumno inscrito)
+    # ------------------------------------------------------------------
+
+    @action(detail=True, methods=['get'], url_path='download-receipt')
+    def download_receipt(self, request, pk=None):
+        """
+        GET /api/enrollments/enrollments/{id}/download-receipt/
+        Genera y descarga un PDF de comprobante de inscripción.
+        Solo disponible cuando status == 'enrolled'.
+        """
+        enrollment = self.get_object()
+
+        # El alumno solo puede descargar su propio comprobante
+        user = request.user
+        if user.role not in STAFF_ROLES:
+            if not hasattr(user, 'student_profile') or enrollment.student != user.student_profile:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied('No tienes permiso para descargar este comprobante.')
+
+        if enrollment.status != 'enrolled':
+            return Response(
+                {'error': 'El comprobante solo está disponible para inscripciones completadas'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        buffer = io.BytesIO()
+        self._generate_enrollment_receipt_pdf(buffer, enrollment)
+        buffer.seek(0)
+
+        response = HttpResponse(buffer, content_type='application/pdf')
+        response['Content-Disposition'] = (
+            f'attachment; filename="comprobante-inscripcion-{enrollment.matricula}.pdf"'
+        )
+        return response
+
+    def _generate_enrollment_receipt_pdf(self, buffer, enrollment):
+        """Genera PDF de comprobante de inscripción."""
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.units import cm
+        from reportlab.lib import colors
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.enums import TA_CENTER
+
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        styles = getSampleStyleSheet()
+        story = []
+
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            alignment=TA_CENTER,
+            fontSize=16,
+        )
+        subtitle_style = ParagraphStyle(
+            'Subtitle',
+            parent=styles['Normal'],
+            alignment=TA_CENTER,
+            fontSize=11,
+            textColor=colors.HexColor('#555555'),
+        )
+
+        story.append(Paragraph('SISTEMA UNIVERSITARIO', title_style))
+        story.append(Paragraph('COMPROBANTE DE INSCRIPCIÓN', title_style))
+        story.append(Spacer(1, 0.3 * cm))
+        story.append(Paragraph('Documento oficial — conserve para sus registros', subtitle_style))
+        story.append(Spacer(1, 0.8 * cm))
+
+        student = enrollment.student
+        domain = getattr(settings, 'INSTITUTIONAL_EMAIL_DOMAIN', 'universidad.edu.mx')
+        institutional_email = (
+            student.institutional_email
+            or f"{enrollment.matricula}@{domain}"
+        )
+
+        enrolled_at_str = (
+            enrollment.enrolled_at.strftime('%d/%m/%Y %H:%M')
+            if enrollment.enrolled_at else
+            enrollment.updated_at.strftime('%d/%m/%Y %H:%M')
+        )
+
+        data = [
+            ['Nombre completo:', student.get_full_name()],
+            ['Matrícula:', enrollment.matricula],
+            ['Correo institucional:', institutional_email],
+            ['Programa:', enrollment.program.name],
+            ['Código de programa:', enrollment.program.code],
+            ['Periodo:', enrollment.period.name],
+        ]
+        if enrollment.group:
+            data.append(['Grupo:', enrollment.group])
+        if enrollment.schedule:
+            data.append(['Horario:', enrollment.schedule])
+        data.append(['Fecha de inscripción:', enrolled_at_str])
+
+        table = Table(data, colWidths=[5 * cm, 12 * cm])
+        table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 11),
+            ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.whitesmoke, colors.white]),
+            ('GRID', (0, 0), (-1, -1), 0.25, colors.grey),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        story.append(table)
+        story.append(Spacer(1, 1 * cm))
+
+        footer_style = ParagraphStyle(
+            'Footer',
+            parent=styles['Normal'],
+            fontSize=9,
+            textColor=colors.HexColor('#888888'),
+        )
+        story.append(Paragraph(
+            'Este documento es un comprobante oficial de inscripción. '
+            'Para cualquier aclaración, acuda a Servicios Escolares.',
+            footer_style,
+        ))
+
+        doc.build(story)
 
     # ------------------------------------------------------------------
     # MY ENROLLMENT (alumno autenticado)
