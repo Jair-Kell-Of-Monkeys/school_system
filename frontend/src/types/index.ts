@@ -322,6 +322,8 @@ export interface Enrollment {
   program_code: string;
   period_name: string;
   institutional_email: string | null;
+  group: string | null;
+  schedule: string | null;
   enrolled_at: string | null;
   created_at: string;
 }

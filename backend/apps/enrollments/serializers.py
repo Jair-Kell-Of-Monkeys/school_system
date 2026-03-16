@@ -101,6 +101,8 @@ class EnrollmentListSerializer(serializers.ModelSerializer):
             'program_name',
             'program_code',
             'period_name',
+            'group',
+            'schedule',
             'enrolled_at',
             'created_at',
         ]
@@ -115,6 +117,12 @@ class EnrollmentDetailSerializer(serializers.ModelSerializer):
     institutional_email = serializers.EmailField(
         source='student.institutional_email', read_only=True
     )
+    # Flat fields for frontend convenience (mirrors EnrollmentListSerializer)
+    student_name = serializers.CharField(source='student.get_full_name', read_only=True)
+    student_curp = serializers.CharField(source='student.curp', read_only=True)
+    program_name = serializers.CharField(source='program.name', read_only=True)
+    program_code = serializers.CharField(source='program.code', read_only=True)
+    period_name = serializers.CharField(source='period.name', read_only=True)
 
     class Meta:
         model = Enrollment
@@ -123,6 +131,11 @@ class EnrollmentDetailSerializer(serializers.ModelSerializer):
             'matricula',
             'status',
             'status_display',
+            'student_name',
+            'student_curp',
+            'program_name',
+            'program_code',
+            'period_name',
             'student',
             'program',
             'period',

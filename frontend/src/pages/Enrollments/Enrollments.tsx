@@ -5,6 +5,7 @@ import { Button } from '@/components/atoms/Button/Button';
 import { Badge } from '@/components/atoms/Badge/Badge';
 import { Input } from '@/components/atoms/Input/Input';
 import { enrollmentsService } from '@/services/enrollments/enrollmentsService';
+import { useAuthStore } from '@/store/authStore';
 import type { EnrollmentDetail, EnrollmentDocument } from '@/types';
 import {
   GraduationCap,
@@ -16,6 +17,7 @@ import {
   Eye,
   X,
   FileText,
+  Download,
 } from 'lucide-react';
 
 const STATUS_VARIANTS: Record<string, 'info' | 'warning' | 'success' | 'danger' | 'default'> = {
@@ -338,6 +340,9 @@ export const Enrollments = () => {
   const [searchInput, setSearchInput] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const currentUser = useAuthStore((s) => s.user);
+  const canExport = currentUser?.role === 'admin' || currentUser?.role === 'servicios_escolares_jefe';
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['enrollments', page, search, statusFilter],
@@ -363,14 +368,37 @@ export const Enrollments = () => {
     setPage(1);
   };
 
+  const handleExportCsv = async () => {
+    setIsExporting(true);
+    try {
+      await enrollmentsService.exportCsv();
+    } catch {
+      alert('Error al exportar el CSV. Intenta de nuevo.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Inscripciones</h1>
-        <p className="text-gray-600 mt-1">
-          Revisión de documentos y confirmación de inscripciones formales
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Inscripciones</h1>
+          <p className="text-gray-600 mt-1">
+            Revisión de documentos y confirmación de inscripciones formales
+          </p>
+        </div>
+        {canExport && (
+          <Button
+            variant="outline"
+            onClick={handleExportCsv}
+            isLoading={isExporting}
+          >
+            <Download size={16} className="mr-2" />
+            Exportar CSV
+          </Button>
+        )}
       </div>
 
       {/* Filtros */}

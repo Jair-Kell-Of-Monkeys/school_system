@@ -13,7 +13,6 @@ import {
   Calendar,
   CheckCircle,
   XCircle,
-  Clock,
   Download,
 } from 'lucide-react';
 
@@ -30,7 +29,7 @@ export const PreEnrollmentDetailsModal = ({
 }: PreEnrollmentDetailsModalProps) => {
   const queryClient = useQueryClient();
   const currentUser = useAuthStore((s) => s.user);
-  const [activeTab, setActiveTab] = useState<'info' | 'documents' | 'exam' | 'actions'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'documents' | 'exam'>('info');
   const [notes, setNotes] = useState('');
   const [examData, setExamData] = useState({
     exam_date: '',
@@ -97,24 +96,6 @@ export const PreEnrollmentDetailsModal = ({
     },
   });
 
-  const acceptMutation = useMutation({
-    mutationFn: () => preEnrollmentsService.accept(preEnrollment?.id ?? ''),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pre-enrollments'] });
-      alert('Aspirante aceptado correctamente');
-      onClose();
-    },
-  });
-
-  const rejectMutation = useMutation({
-    mutationFn: (notes: string) => preEnrollmentsService.reject(preEnrollment?.id ?? '', notes),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pre-enrollments'] });
-      alert('Aspirante rechazado');
-      onClose();
-    },
-  });
-
   if (!isOpen || !preEnrollment) return null;
 
   const canReviewDocuments = ['admin', 'servicios_escolares', 'servicios_escolares_jefe'].includes(currentUser?.role ?? '');
@@ -169,7 +150,6 @@ export const PreEnrollmentDetailsModal = ({
                 { id: 'info', label: 'Información', icon: User },
                 { id: 'documents', label: 'Documentos', icon: FileText },
                 { id: 'exam', label: 'Examen', icon: Calendar },
-                { id: 'actions', label: 'Acciones', icon: CheckCircle },
               ].map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
@@ -580,68 +560,6 @@ export const PreEnrollmentDetailsModal = ({
               </div>
             )}
 
-            {/* Tab: Acciones */}
-            {activeTab === 'actions' && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Decisión Final
-                </h3>
-
-                {preEnrollment.exam_score !== null &&
-                preEnrollment.status === 'exam_completed' ? (
-                  <div className="space-y-4">
-                    <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                      <p className="text-sm text-blue-800 mb-4">
-                        El aspirante completó el examen con una calificación de{' '}
-                        <span className="font-bold">{preEnrollment.exam_score}/100</span>.
-                        Decide si aceptar o rechazar la solicitud.
-                      </p>
-                    </div>
-
-                    <textarea
-                      placeholder="Notas sobre la decisión..."
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      rows={3}
-                    />
-
-                    <div className="flex space-x-3">
-                      <Button
-                        variant="success"
-                        onClick={() => acceptMutation.mutate()}
-                        isLoading={acceptMutation.isPending}
-                      >
-                        <CheckCircle size={16} className="mr-2" />
-                        Aceptar Aspirante
-                      </Button>
-                      <Button
-                        variant="danger"
-                        onClick={() => {
-                          if (notes.trim()) {
-                            rejectMutation.mutate(notes);
-                          } else {
-                            alert('Por favor agrega una nota explicando el rechazo');
-                          }
-                        }}
-                        isLoading={rejectMutation.isPending}
-                      >
-                        <XCircle size={16} className="mr-2" />
-                        Rechazar Aspirante
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <Clock size={48} className="mx-auto mb-4 text-gray-400" />
-                    <p>
-                      Las acciones finales estarán disponibles cuando el aspirante complete
-                      el examen.
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Footer */}

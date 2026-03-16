@@ -65,6 +65,21 @@ export const enrollmentsService = {
     return response.data.enrollment;
   },
 
+  // Exportar CSV de inscripciones (solo jefe/admin)
+  async exportCsv(): Promise<void> {
+    const response = await axios.get('/enrollments/enrollments/export-csv/', {
+      responseType: 'blob',
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'inscripciones.csv');
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
+
   // Crear inscripción desde pre-inscripción aceptada (staff)
   async createEnrollment(
     preEnrollmentId: string,

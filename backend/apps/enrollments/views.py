@@ -1,5 +1,8 @@
 # apps/enrollments/views.py
+import csv
 import logging
+from django.conf import settings
+from django.http import HttpResponse
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -365,6 +368,71 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
             'message': 'Inscripción confirmada. El alumno debe realizar el pago de inscripción.',
             'enrollment': serializer.data,
         })
+
+    # ------------------------------------------------------------------
+    # EXPORT CSV (jefe de servicios escolares / admin)
+    # ------------------------------------------------------------------
+
+    @action(
+        detail=False,
+        methods=['get'],
+        url_path='export-csv',
+        permission_classes=[IsAdminOrServiciosEscolares],
+    )
+    def export_csv(self, request):
+        """
+        GET /api/enrollments/enrollments/export-csv/
+        Descarga un CSV con inscripciones activas para el área de TI.
+        Solo accesible para admin y servicios_escolares_jefe.
+        """
+        if request.user.role not in ('admin', 'servicios_escolares_jefe'):
+            return Response(
+                {'error': 'Solo el jefe de servicios escolares o admin puede exportar'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        EXPORT_STATUSES = [
+            'pending_docs', 'docs_submitted', 'docs_approved',
+            'pending_payment', 'payment_submitted', 'payment_validated', 'enrolled',
+        ]
+        domain = getattr(settings, 'INSTITUTIONAL_EMAIL_DOMAIN', 'universidad.edu.mx')
+
+        qs = (
+            Enrollment.objects
+            .select_related('student', 'program', 'period')
+            .filter(status__in=EXPORT_STATUSES)
+            .order_by('period__name', 'program__code', 'matricula')
+        )
+
+        http_response = HttpResponse(content_type='text/csv; charset=utf-8')
+        http_response['Content-Disposition'] = 'attachment; filename="inscripciones.csv"'
+        http_response.write('\ufeff')  # BOM para Excel
+
+        writer = csv.writer(http_response)
+        writer.writerow([
+            'matricula', 'nombre', 'apellido_paterno', 'apellido_materno',
+            'correo_institucional', 'programa', 'periodo', 'grupo', 'horario',
+        ])
+
+        for enrollment in qs:
+            student = enrollment.student
+            institutional_email = (
+                student.institutional_email
+                or f"{enrollment.matricula}@{domain}"
+            )
+            writer.writerow([
+                enrollment.matricula,
+                student.first_name,
+                student.last_name,
+                getattr(student, 'second_last_name', '') or '',
+                institutional_email,
+                enrollment.program.code,
+                enrollment.period.name,
+                enrollment.group or '',
+                enrollment.schedule or '',
+            ])
+
+        return http_response
 
     # ------------------------------------------------------------------
     # MY ENROLLMENT (alumno autenticado)
