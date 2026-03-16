@@ -260,6 +260,7 @@ export interface ExamSession {
   exam_date: string;
   exam_time: string;
   mode: string;
+  exam_type: string;
   passing_score: number;
   status: string;
   status_display: string;

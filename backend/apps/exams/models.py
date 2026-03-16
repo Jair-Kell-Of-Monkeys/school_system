@@ -23,6 +23,10 @@ class ExamSession(models.Model):
         ('presencial', 'Presencial'),
         ('en_linea', 'En Línea'),
     ]
+    EXAM_TYPE_CHOICES = [
+        ('propio', 'Propio'),
+        ('cenaval', 'CENAVAL'),
+    ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255, verbose_name='Nombre')
@@ -40,6 +44,12 @@ class ExamSession(models.Model):
         choices=MODE_CHOICES,
         default='presencial',
         verbose_name='Modalidad',
+    )
+    exam_type = models.CharField(
+        max_length=20,
+        choices=EXAM_TYPE_CHOICES,
+        default='propio',
+        verbose_name='Tipo de Examen',
     )
     passing_score = models.IntegerField(
         default=70,

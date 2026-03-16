@@ -32,6 +32,7 @@ export const examsService = {
     exam_date: string;
     exam_time: string;
     mode: 'presencial' | 'en_linea';
+    exam_type: 'propio' | 'cenaval';
     passing_score: number;
     venues: Array<{
       program: number;

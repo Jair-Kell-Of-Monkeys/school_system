@@ -53,6 +53,7 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
     exam_date: '',
     exam_time: '',
     mode: 'presencial' as 'presencial' | 'en_linea',
+    exam_type: 'propio' as 'propio' | 'cenaval',
     passing_score: '70',
   });
   const [venues, setVenues] = useState<VenueRow[]>([
@@ -131,6 +132,7 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
       exam_date: formData.exam_date,
       exam_time: formData.exam_time,
       mode: formData.mode,
+      exam_type: formData.exam_type,
       passing_score: parseInt(formData.passing_score),
       venues: venues.map((v) => ({
         program: parseInt(v.program),
@@ -199,6 +201,25 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
               >
                 <option value="presencial">Presencial</option>
                 <option value="en_linea">En Línea</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tipo de Examen <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.exam_type}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    exam_type: e.target.value as 'propio' | 'cenaval',
+                  })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              >
+                <option value="propio">Propio</option>
+                <option value="cenaval">CENAVAL</option>
               </select>
             </div>
 

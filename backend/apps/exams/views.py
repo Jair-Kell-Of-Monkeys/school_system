@@ -83,6 +83,7 @@ class ExamSessionViewSet(viewsets.ModelViewSet):
             exam_date=data['exam_date'],
             exam_time=data['exam_time'],
             mode=data['mode'],
+            exam_type=data.get('exam_type', 'propio'),
             passing_score=data['passing_score'],
             status='draft',
             created_by=request.user,

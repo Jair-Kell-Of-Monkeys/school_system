@@ -2,6 +2,7 @@
 import random
 import unicodedata
 import re
+from datetime import datetime
 from django.conf import settings
 
 
@@ -11,17 +12,18 @@ def _normalize(s):
     return re.sub(r'[^a-zA-Z]', '', s).lower()
 
 
-def generate_matricula(program_code, period_year):
+def generate_matricula(program_code, period_year=None):
     """
-    Genera una matrícula única con formato: {YEAR}{PROG}{NNN}
-    donde NNN son 3 dígitos aleatorios (000-999).
+    Genera una matrícula única con formato: {YEAR}{MONTH}{NNN}
+    donde YEAR y MONTH son el año y mes actuales, y NNN son 3 dígitos aleatorios.
     Reintenta hasta obtener un valor único (máx. 200 intentos).
 
-    Ejemplo: 2026ING047, 2026MED823
+    Ejemplo: si se inscribe en abril 2026 → 202604381
     """
     from apps.enrollments.models import Enrollment
 
-    prefix = f"{period_year}{program_code[:3].upper()}"
+    now = datetime.now()
+    prefix = f"{now.year}{now.month:02d}"
 
     for _ in range(200):
         digits = f"{random.randint(0, 999):03d}"

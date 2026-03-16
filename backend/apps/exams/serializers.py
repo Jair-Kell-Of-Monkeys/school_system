@@ -40,7 +40,7 @@ class ExamSessionListSerializer(serializers.ModelSerializer):
         model = ExamSession
         fields = [
             'id', 'name', 'period', 'period_name', 'exam_date', 'exam_time',
-            'mode', 'passing_score', 'status', 'status_display',
+            'mode', 'exam_type', 'passing_score', 'status', 'status_display',
             'created_by_email', 'venue_count', 'total_capacity', 'created_at',
         ]
 
@@ -65,7 +65,7 @@ class ExamSessionDetailSerializer(serializers.ModelSerializer):
         model = ExamSession
         fields = [
             'id', 'name', 'period', 'period_name', 'exam_date', 'exam_time',
-            'mode', 'passing_score', 'status', 'status_display',
+            'mode', 'exam_type', 'passing_score', 'status', 'status_display',
             'created_by_email', 'venues', 'total_capacity', 'created_at', 'updated_at',
         ]
 
@@ -82,6 +82,7 @@ class ExamSessionCreateSerializer(serializers.Serializer):
     exam_date = serializers.DateField()
     exam_time = serializers.TimeField()
     mode = serializers.ChoiceField(choices=['presencial', 'en_linea'])
+    exam_type = serializers.ChoiceField(choices=['propio', 'cenaval'], default='propio')
     passing_score = serializers.IntegerField(min_value=0, max_value=100, default=70)
     venues = ExamVenueCreateSerializer(many=True)
 
