@@ -24,11 +24,10 @@ import {
   GraduationCap,
 } from 'lucide-react';
 
-// Documentos requeridos para inscripción formal
+// Documentos requeridos para inscripción formal (exactamente 2)
 const ENROLLMENT_DOC_TYPES = [
   { key: 'numero_seguridad_social', label: 'Número de Seguridad Social' },
   { key: 'certificado_bachillerato', label: 'Certificado de Bachillerato Original' },
-  { key: 'acta_nacimiento', label: 'Acta de Nacimiento Original' },
 ] as const;
 
 const PAYMENT_STATUSES = ['payment_pending', 'payment_submitted', 'payment_validated'];
@@ -818,7 +817,7 @@ export const MyApplication = () => {
           )}
 
           {/* Documentos de inscripción */}
-          {(enrollment.status === 'pending_documents' || enrollment.status === 'pending_payment') && (
+          {(enrollment.status === 'pending_docs' || enrollment.status === 'pending_payment') && (
             <Card>
               <div className="flex items-center mb-5">
                 <BookOpen className="text-primary-600 mr-3 flex-shrink-0" size={24} />
@@ -834,16 +833,18 @@ export const MyApplication = () => {
                     Todos tus documentos han sido aprobados. Procede al pago de inscripción.
                   </p>
                 </div>
-              ) : (
+              ) : enrollment.status === 'pending_docs' ? (
                 <p className="text-sm text-gray-600 mb-4">
                   Sube los siguientes documentos para continuar con tu inscripción:
                 </p>
-              )}
+              ) : null}
 
               <div className="space-y-4">
                 {ENROLLMENT_DOC_TYPES.map(({ key, label }) => {
                   const uploaded = enrollment.documents?.find((d) => d.document_type === key);
-                  const canUpload = !uploaded || uploaded.status === 'rejected';
+                  // Placeholder: record exists but no file yet (file_name is empty)
+                  const isPlaceholder = uploaded && !uploaded.file_name;
+                  const canUpload = !uploaded || isPlaceholder || uploaded.status === 'rejected';
 
                   return (
                     <div
@@ -874,7 +875,7 @@ export const MyApplication = () => {
                         </p>
                       )}
 
-                      {uploaded && uploaded.status !== 'rejected' ? (
+                      {uploaded && !isPlaceholder && uploaded.status !== 'rejected' ? (
                         <p className="text-sm text-gray-500">
                           Archivo: {uploaded.file_name}
                         </p>

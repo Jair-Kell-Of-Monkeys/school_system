@@ -29,6 +29,9 @@ logger = logging.getLogger(__name__)
 
 STAFF_ROLES = ['admin', 'servicios_escolares_jefe', 'servicios_escolares']
 
+# Documentos exactamente requeridos para completar la inscripción
+REQUIRED_DOC_TYPES = ['numero_seguridad_social', 'certificado_bachillerato']
+
 
 class EnrollmentViewSet(viewsets.ModelViewSet):
     """
@@ -179,6 +182,14 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
         )
         enrollment.save()
 
+        # Crear registros placeholder para los documentos requeridos
+        for doc_type in REQUIRED_DOC_TYPES:
+            EnrollmentDocument.objects.get_or_create(
+                enrollment=enrollment,
+                document_type=doc_type,
+                defaults={'status': 'pending', 'file_name': ''},
+            )
+
         logger.info(
             '[EnrollmentViewSet.create] Inscripción creada: matricula=%s student=%s',
             matricula, student.pk,
@@ -226,15 +237,18 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
         mime_type = uploaded_file.content_type if uploaded_file else None
 
         existing = enrollment.documents.filter(document_type=document_type).first()
-        is_reupload_of_rejected = existing and existing.status == 'rejected'
+        # Placeholder: registro sin archivo (creado al crear la inscripción)
+        is_placeholder = existing and not existing.file_path
+        is_rejected = existing and existing.status == 'rejected'
 
-        if not is_reupload_of_rejected and existing and existing.status in ('pending', 'approved'):
+        if existing and not is_placeholder and not is_rejected and existing.status in ('pending', 'approved'):
             return Response(
                 {'error': 'Este tipo de documento ya fue subido. Solo puedes reemplazar documentos rechazados.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if existing and existing.status == 'rejected':
+        if existing and (is_placeholder or is_rejected):
+            # Actualizar el registro existente (placeholder o rechazado)
             existing.file_path = serializer.validated_data['file_path']
             existing.status = 'pending'
             existing.reviewer_notes = None
@@ -296,8 +310,28 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
         document.reviewed_at = timezone.now()
         document.save()
 
-        # Send rejection notification email
-        if action_type == 'reject' and reviewer_notes:
+        if action_type == 'approve':
+            # Verificar si todos los documentos requeridos ya están aprobados
+            required_docs = enrollment.documents.filter(document_type__in=REQUIRED_DOC_TYPES)
+            all_approved = (
+                required_docs.count() == len(REQUIRED_DOC_TYPES)
+                and required_docs.filter(status='approved').count() == len(REQUIRED_DOC_TYPES)
+            )
+            if all_approved and enrollment.status == 'pending_docs':
+                enrollment.status = 'enrolled'
+                enrollment.save(update_fields=['status', 'updated_at'])
+                logger.info(
+                    '[EnrollmentViewSet.review_document] Inscripción completada: enrollment=%s',
+                    enrollment.pk,
+                )
+                from .tasks import send_enrollment_completed_email_task
+                try:
+                    send_enrollment_completed_email_task.delay(str(enrollment.id))
+                except Exception:
+                    from .email_service import send_enrollment_completed_email
+                    send_enrollment_completed_email(enrollment)
+
+        elif action_type == 'reject':
             from .tasks import send_enrollment_document_rejected_email_task
             try:
                 send_enrollment_document_rejected_email_task.delay(str(document.id), reviewer_notes)

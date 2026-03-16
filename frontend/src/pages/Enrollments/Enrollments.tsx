@@ -21,11 +21,15 @@ import {
 } from 'lucide-react';
 
 const STATUS_VARIANTS: Record<string, 'info' | 'warning' | 'success' | 'danger' | 'default'> = {
-  pending_documents: 'warning',
+  pending_docs: 'warning',
+  docs_submitted: 'warning',
+  docs_approved: 'info',
   pending_payment: 'info',
+  payment_submitted: 'info',
+  payment_validated: 'info',
   enrolled: 'success',
   active: 'success',
-  cancelled: 'danger',
+  withdrawn: 'danger',
 };
 
 const DOC_STATUS_VARIANT: Record<string, 'warning' | 'success' | 'danger'> = {
@@ -42,8 +46,11 @@ interface EnrollmentDetailModalProps {
   onRefresh: () => void;
 }
 
+const REQUIRED_DOC_TYPES = ['numero_seguridad_social', 'certificado_bachillerato'];
+
 const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDetailModalProps) => {
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<'info' | 'documents'>('info');
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
   const [confirmGroup, setConfirmGroup] = useState(enrollment.group ?? '');
   const [confirmSchedule, setConfirmSchedule] = useState(enrollment.schedule ?? '');
@@ -79,7 +86,7 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
       queryClient.invalidateQueries({ queryKey: ['enrollments'] });
       onRefresh();
       setShowConfirmForm(false);
-      alert('Inscripción confirmada. El alumno debe realizar el pago.');
+      alert('Grupo y horario asignados correctamente.');
     },
     onError: (err: unknown) => {
       const msg =
@@ -89,12 +96,16 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
     },
   });
 
-  const allDocsApproved =
-    enrollment.documents.length > 0 &&
-    enrollment.documents.every((d) => d.status === 'approved');
+  // Documentos que ya tienen archivo subido (excluye placeholders)
+  const uploadedDocs = enrollment.documents.filter((d) => !!d.file_name);
+  const requiredUploadedDocs = uploadedDocs.filter((d) =>
+    REQUIRED_DOC_TYPES.includes(d.document_type)
+  );
+  const allRequiredApproved =
+    requiredUploadedDocs.length === REQUIRED_DOC_TYPES.length &&
+    requiredUploadedDocs.every((d) => d.status === 'approved');
 
-  const canConfirm =
-    enrollment.status === 'pending_documents' && allDocsApproved;
+  const pendingReview = uploadedDocs.filter((d) => d.status === 'pending').length;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center overflow-y-auto py-8 px-4">
@@ -119,212 +130,262 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
-          {/* Info del estudiante */}
-          <section>
-            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-              Información del Estudiante
-            </h3>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-              <div>
-                <span className="text-gray-500">Nombre:</span>{' '}
-                <span className="font-medium text-gray-900">{enrollment.student_name}</span>
-              </div>
-              <div>
-                <span className="text-gray-500">CURP:</span>{' '}
-                <span className="font-medium text-gray-900">{enrollment.student_curp}</span>
-              </div>
-              <div>
-                <span className="text-gray-500">Programa:</span>{' '}
-                <span className="font-medium text-gray-900">
-                  {enrollment.program_code} — {enrollment.program_name}
-                </span>
-              </div>
-              <div>
-                <span className="text-gray-500">Periodo:</span>{' '}
-                <span className="font-medium text-gray-900">{enrollment.period_name}</span>
-              </div>
-              {enrollment.student?.institutional_email && (
-                <div className="col-span-2">
-                  <span className="text-gray-500">Correo institucional:</span>{' '}
-                  <span className="font-medium text-gray-900">
-                    {enrollment.student.institutional_email}
-                  </span>
+        {/* Tabs */}
+        <div className="border-b border-gray-200">
+          <nav className="flex px-6">
+            {[
+              { id: 'info' as const, label: 'Información' },
+              {
+                id: 'documents' as const,
+                label: `Documentos${pendingReview > 0 ? ` (${pendingReview} pendiente${pendingReview > 1 ? 's' : ''})` : ''}`,
+              },
+            ].map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === id
+                    ? 'border-primary-500 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        <div className="p-6">
+          {/* Tab: Información */}
+          {activeTab === 'info' && (
+            <div className="space-y-6">
+              <section>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                  Información del Estudiante
+                </h3>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                  <div>
+                    <span className="text-gray-500">Nombre:</span>{' '}
+                    <span className="font-medium text-gray-900">{enrollment.student_name}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">CURP:</span>{' '}
+                    <span className="font-medium text-gray-900">{enrollment.student_curp}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Programa:</span>{' '}
+                    <span className="font-medium text-gray-900">
+                      {enrollment.program_code} — {enrollment.program_name}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Periodo:</span>{' '}
+                    <span className="font-medium text-gray-900">{enrollment.period_name}</span>
+                  </div>
+                  {enrollment.student?.institutional_email && (
+                    <div className="col-span-2">
+                      <span className="text-gray-500">Correo institucional:</span>{' '}
+                      <span className="font-medium text-gray-900">
+                        {enrollment.student.institutional_email}
+                      </span>
+                    </div>
+                  )}
+                  {enrollment.group && (
+                    <div>
+                      <span className="text-gray-500">Grupo:</span>{' '}
+                      <span className="font-medium text-gray-900">{enrollment.group}</span>
+                    </div>
+                  )}
+                  {enrollment.schedule && (
+                    <div>
+                      <span className="text-gray-500">Horario:</span>{' '}
+                      <span className="font-medium text-gray-900">{enrollment.schedule}</span>
+                    </div>
+                  )}
                 </div>
+              </section>
+
+              {/* Asignar grupo/horario (si aún no se ha asignado) */}
+              {!enrollment.group && enrollment.status === 'pending_docs' && (
+                <section>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                    Asignar Grupo y Horario
+                  </h3>
+                  {!showConfirmForm ? (
+                    <Button size="sm" variant="outline" onClick={() => setShowConfirmForm(true)}>
+                      Asignar Grupo y Horario
+                    </Button>
+                  ) : (
+                    <div className="space-y-3 border border-gray-200 rounded-lg p-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Grupo <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                          value={confirmGroup}
+                          onChange={(e) => setConfirmGroup(e.target.value)}
+                          placeholder="Ej: ING-A"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Horario <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                          value={confirmSchedule}
+                          onChange={(e) => setConfirmSchedule(e.target.value)}
+                          placeholder="Ej: Lunes-Viernes 8:00-14:00"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => confirmMutation.mutate()}
+                          isLoading={confirmMutation.isPending}
+                          disabled={!confirmGroup.trim() || !confirmSchedule.trim()}
+                        >
+                          Guardar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setShowConfirmForm(false)}
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </section>
               )}
-              {enrollment.group && (
-                <div>
-                  <span className="text-gray-500">Grupo:</span>{' '}
-                  <span className="font-medium text-gray-900">{enrollment.group}</span>
-                </div>
-              )}
-              {enrollment.schedule && (
-                <div>
-                  <span className="text-gray-500">Horario:</span>{' '}
-                  <span className="font-medium text-gray-900">{enrollment.schedule}</span>
-                </div>
+
+              {/* Estado de documentos requeridos */}
+              {enrollment.status === 'pending_docs' && (
+                <section>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                    Estado de Documentos
+                  </h3>
+                  {allRequiredApproved ? (
+                    <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
+                      <CheckCircle size={16} className="text-green-600 flex-shrink-0" />
+                      Todos los documentos requeridos han sido aprobados. La inscripción se
+                      completará automáticamente.
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+                      <FileText size={16} className="text-yellow-600 flex-shrink-0" />
+                      Revisa la pestaña <strong className="mx-1">Documentos</strong> para
+                      aprobar o rechazar los archivos del alumno.
+                    </div>
+                  )}
+                </section>
               )}
             </div>
-          </section>
+          )}
 
-          {/* Documentos */}
-          <section>
-            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-              Documentos de Inscripción
-            </h3>
-
-            {enrollment.documents.length === 0 ? (
-              <p className="text-sm text-gray-500">
-                El alumno aún no ha subido documentos.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {enrollment.documents.map((doc: EnrollmentDocument) => (
-                  <div
-                    key={doc.id}
-                    className="border border-gray-200 rounded-lg p-4"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <FileText size={16} className="text-gray-400" />
-                        <span className="font-medium text-gray-900 text-sm">
-                          {doc.document_type_display}
-                        </span>
-                      </div>
-                      <Badge variant={DOC_STATUS_VARIANT[doc.status] ?? 'default'}>
-                        {doc.status_display}
-                      </Badge>
-                    </div>
-
-                    <p className="text-xs text-gray-500 mb-2">{doc.file_name}</p>
-
-                    {doc.file_url && (
-                      <a
-                        href={doc.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-primary-600 hover:underline inline-flex items-center gap-1 mb-2"
-                      >
-                        <Eye size={12} />
-                        Ver archivo
-                      </a>
-                    )}
-
-                    {doc.reviewer_notes && (
-                      <p className="text-xs text-gray-600 mt-1">
-                        <span className="font-medium">Notas:</span> {doc.reviewer_notes}
-                      </p>
-                    )}
-
-                    {doc.status === 'pending' && (
-                      <div className="mt-3 space-y-2">
-                        <textarea
-                          rows={2}
-                          placeholder="Notas del revisor (requerido para rechazar)"
-                          value={reviewNotes[doc.id] ?? ''}
-                          onChange={(e) =>
-                            setReviewNotes((prev) => ({ ...prev, [doc.id]: e.target.value }))
-                          }
-                          className="w-full text-sm px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
-                        />
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="success"
-                            onClick={() =>
-                              reviewDocMutation.mutate({
-                                documentId: doc.id,
-                                action: 'approve',
-                                notes: reviewNotes[doc.id] ?? '',
-                              })
-                            }
-                            isLoading={reviewDocMutation.isPending}
-                          >
-                            <CheckCircle size={14} className="mr-1" />
-                            Aprobar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="danger"
-                            disabled={!reviewNotes[doc.id]?.trim()}
-                            onClick={() =>
-                              reviewDocMutation.mutate({
-                                documentId: doc.id,
-                                action: 'reject',
-                                notes: reviewNotes[doc.id] ?? '',
-                              })
-                            }
-                            isLoading={reviewDocMutation.isPending}
-                          >
-                            <XCircle size={14} className="mr-1" />
-                            Rechazar
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* Confirmar inscripción */}
-          {enrollment.status === 'pending_documents' && (
-            <section>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-                Confirmar Inscripción
-              </h3>
-
-              {!canConfirm && (
-                <p className="text-sm text-gray-500 mb-3">
-                  Todos los documentos deben estar aprobados antes de confirmar.
+          {/* Tab: Documentos */}
+          {activeTab === 'documents' && (
+            <div className="space-y-3">
+              {enrollment.documents.length === 0 ? (
+                <p className="text-sm text-gray-500 py-4 text-center">
+                  El alumno aún no ha subido documentos.
                 </p>
-              )}
-
-              {!showConfirmForm ? (
-                <Button
-                  onClick={() => setShowConfirmForm(true)}
-                  disabled={!canConfirm}
-                >
-                  Asignar Grupo y Horario
-                </Button>
               ) : (
-                <div className="space-y-3 border border-gray-200 rounded-lg p-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Grupo <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      value={confirmGroup}
-                      onChange={(e) => setConfirmGroup(e.target.value)}
-                      placeholder="Ej: ING-A"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Horario <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      value={confirmSchedule}
-                      onChange={(e) => setConfirmSchedule(e.target.value)}
-                      placeholder="Ej: Lunes-Viernes 8:00-14:00"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => confirmMutation.mutate()}
-                      isLoading={confirmMutation.isPending}
-                      disabled={!confirmGroup.trim() || !confirmSchedule.trim()}
-                    >
-                      Confirmar Inscripción
-                    </Button>
-                    <Button variant="outline" onClick={() => setShowConfirmForm(false)}>
-                      Cancelar
-                    </Button>
-                  </div>
-                </div>
+                enrollment.documents.map((doc: EnrollmentDocument) => {
+                  const hasFile = !!doc.file_name;
+                  return (
+                    <div key={doc.id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <FileText size={16} className="text-gray-400" />
+                          <span className="font-medium text-gray-900 text-sm">
+                            {doc.document_type_display}
+                          </span>
+                        </div>
+                        <Badge variant={DOC_STATUS_VARIANT[doc.status] ?? 'default'}>
+                          {hasFile ? doc.status_display : 'Sin subir'}
+                        </Badge>
+                      </div>
+
+                      {hasFile && (
+                        <>
+                          <p className="text-xs text-gray-500 mb-2">{doc.file_name}</p>
+
+                          {doc.file_url && (
+                            <a
+                              href={doc.file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-primary-600 hover:underline inline-flex items-center gap-1 mb-2"
+                            >
+                              <Eye size={12} />
+                              Ver archivo
+                            </a>
+                          )}
+
+                          {doc.reviewer_notes && (
+                            <p className="text-xs text-gray-600 mt-1">
+                              <span className="font-medium">Observación:</span>{' '}
+                              {doc.reviewer_notes}
+                            </p>
+                          )}
+
+                          {doc.status === 'pending' && (
+                            <div className="mt-3 space-y-2">
+                              <textarea
+                                rows={2}
+                                placeholder="Observación para el alumno (requerido para rechazar)"
+                                value={reviewNotes[doc.id] ?? ''}
+                                onChange={(e) =>
+                                  setReviewNotes((prev) => ({
+                                    ...prev,
+                                    [doc.id]: e.target.value,
+                                  }))
+                                }
+                                className="w-full text-sm px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                              />
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="success"
+                                  onClick={() =>
+                                    reviewDocMutation.mutate({
+                                      documentId: doc.id,
+                                      action: 'approve',
+                                      notes: reviewNotes[doc.id] ?? '',
+                                    })
+                                  }
+                                  isLoading={reviewDocMutation.isPending}
+                                >
+                                  <CheckCircle size={14} className="mr-1" />
+                                  Aprobar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="danger"
+                                  disabled={!reviewNotes[doc.id]?.trim()}
+                                  onClick={() =>
+                                    reviewDocMutation.mutate({
+                                      documentId: doc.id,
+                                      action: 'reject',
+                                      notes: reviewNotes[doc.id] ?? '',
+                                    })
+                                  }
+                                  isLoading={reviewDocMutation.isPending}
+                                >
+                                  <XCircle size={14} className="mr-1" />
+                                  Rechazar
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                })
               )}
-            </section>
+            </div>
           )}
         </div>
       </div>
@@ -425,11 +486,10 @@ export const Enrollments = () => {
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
           >
             <option value="">Todos los estados</option>
-            <option value="pending_documents">Documentos Pendientes</option>
-            <option value="pending_payment">Pago Pendiente</option>
+            <option value="pending_docs">Documentos Pendientes</option>
             <option value="enrolled">Inscrito</option>
             <option value="active">Activo</option>
-            <option value="cancelled">Cancelado</option>
+            <option value="withdrawn">Baja</option>
           </select>
         </div>
       </Card>

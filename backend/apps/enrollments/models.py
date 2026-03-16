@@ -150,10 +150,14 @@ class EnrollmentDocument(models.Model):
     file_path = models.FileField(
         upload_to='enrollment/documents/%Y/%m/',
         verbose_name='Archivo',
+        blank=True,
+        null=True,
     )
     file_name = models.CharField(
         max_length=255,
         verbose_name='Nombre del Archivo',
+        blank=True,
+        default='',
     )
     file_size = models.IntegerField(
         blank=True,
