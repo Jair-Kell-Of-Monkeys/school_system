@@ -82,7 +82,7 @@ export const DocumentUploader = ({ application }: DocumentUploaderProps) => {
     <div className="space-y-6">
       {/* Lista de documentos */}
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
           Documentos Requeridos
         </h3>
         <div className="space-y-3">
@@ -90,17 +90,17 @@ export const DocumentUploader = ({ application }: DocumentUploaderProps) => {
             application.documents.map((doc) => (
               <div
                 key={doc.id}
-                className="border border-gray-200 rounded-lg"
+                className="border border-gray-200 dark:border-gray-700 rounded-lg"
               >
                 {/* Fila principal */}
                 <div className="flex items-center justify-between p-4">
                   <div className="flex items-center space-x-3">
                     <FileText className="text-gray-400" size={24} />
                     <div>
-                      <p className="font-medium text-gray-900">
+                      <p className="font-medium text-gray-900 dark:text-gray-100">
                         {doc.document_type_display}
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
                         Subido: {new Date(doc.uploaded_at).toLocaleDateString('es-MX')}
                       </p>
                       {doc.reviewer_notes && (
@@ -202,17 +202,17 @@ export const DocumentUploader = ({ application }: DocumentUploaderProps) => {
 
       {/* Formulario de subida */}
       {canUploadDocuments && (
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h4 className="font-semibold text-gray-900 mb-4">Subir Nuevo Documento</h4>
+        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">Subir Nuevo Documento</h4>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Tipo de Documento
               </label>
               <select
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
               >
                 <option value="">Selecciona un tipo...</option>
                 {DOCUMENT_TYPES.map((type) => (
@@ -224,17 +224,17 @@ export const DocumentUploader = ({ application }: DocumentUploaderProps) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Archivo (PDF, JPG, PNG - Máx. 5MB)
               </label>
               <input
                 type="file"
                 accept=".pdf,.jpg,.jpeg,.png"
                 onChange={handleFileChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-300"
               />
               {selectedFile && (
-                <p className="text-sm text-gray-600 mt-1">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                   Seleccionado: {selectedFile.name}
                 </p>
               )}
@@ -253,8 +253,8 @@ export const DocumentUploader = ({ application }: DocumentUploaderProps) => {
       )}
 
       {!canUploadDocuments && (
-        <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-center">
-          <p className="text-sm text-gray-600">
+        <div className="p-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-center">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
             No puedes subir documentos en este momento. Tu solicitud está en estado:{' '}
             <span className="font-semibold">{application.status_display}</span>
           </p>

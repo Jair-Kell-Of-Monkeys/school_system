@@ -58,8 +58,8 @@ export const PreEnrollments = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Pre-inscripciones</h1>
-        <p className="text-gray-600 mt-1">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Pre-inscripciones</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-1">
           Gestiona las solicitudes de admisión de aspirantes
         </p>
       </div>
@@ -70,8 +70,8 @@ export const PreEnrollments = () => {
           <Card>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Total</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-2">
                   {stats.total || preEnrollmentsData?.count || 0}
                 </p>
               </div>
@@ -82,7 +82,7 @@ export const PreEnrollments = () => {
           <Card>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">En Revisión</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">En Revisión</p>
                 <p className="text-3xl font-bold text-yellow-600 mt-2">
                   {stats.by_status?.under_review || 0}
                 </p>
@@ -94,7 +94,7 @@ export const PreEnrollments = () => {
           <Card>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Exámenes</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Exámenes</p>
                 <p className="text-3xl font-bold text-blue-600 mt-2">
                   {stats.by_status?.exam_scheduled || 0}
                 </p>
@@ -106,7 +106,7 @@ export const PreEnrollments = () => {
           <Card>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Aceptados</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Aceptados</p>
                 <p className="text-3xl font-bold text-green-600 mt-2">
                   {stats.by_status?.accepted || 0}
                 </p>
@@ -118,7 +118,7 @@ export const PreEnrollments = () => {
           <Card>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Tasa Aceptación</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Tasa Aceptación</p>
                 <p className="text-3xl font-bold text-primary-600 mt-2">
                   {stats.acceptance_rate ? `${Math.round(stats.acceptance_rate)}%` : '-'}
                 </p>
@@ -142,7 +142,7 @@ export const PreEnrollments = () => {
             </div>
 
             <select
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
               value={filters.status}
               onChange={(e) => setFilters({ ...filters, status: e.target.value })}
             >
@@ -184,8 +184,8 @@ export const PreEnrollments = () => {
 
       {/* Tabla de Pre-inscripciones */}
       <Card padding="none">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
             Lista de Pre-inscripciones ({preEnrollmentsData?.count || 0})
           </h2>
         </div>
@@ -197,8 +197,8 @@ export const PreEnrollments = () => {
 
         {/* Paginación */}
         {preEnrollmentsData && preEnrollmentsData.count > 0 && (
-          <div className="p-6 border-t border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-600">
+          <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
               Mostrando {((page - 1) * 20) + 1} - {Math.min(page * 20, preEnrollmentsData.count)} de {preEnrollmentsData.count}
             </div>
             <div className="flex space-x-2">

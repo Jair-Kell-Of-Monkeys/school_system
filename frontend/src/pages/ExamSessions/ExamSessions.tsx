@@ -145,10 +145,10 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center overflow-y-auto py-8 px-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl">
-        <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-xl font-bold text-gray-900">Nueva Sesión de Examen</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-3xl">
+        <div className="flex items-center justify-between p-6 border-b dark:border-gray-700">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Nueva Sesión de Examen</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
             <X size={20} />
           </button>
         </div>
@@ -157,7 +157,7 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
           {/* Session fields */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Nombre de la sesión <span className="text-red-500">*</span>
               </label>
               <Input
@@ -168,13 +168,13 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Periodo <span className="text-red-500">*</span>
               </label>
               <select
                 value={formData.period}
                 onChange={(e) => setFormData({ ...formData, period: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
               >
                 <option value="">Selecciona un periodo...</option>
                 {periods.map((p: { id: number; name: string }) => (
@@ -186,7 +186,7 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Modalidad <span className="text-red-500">*</span>
               </label>
               <select
@@ -197,7 +197,7 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
                     mode: e.target.value as 'presencial' | 'en_linea',
                   })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
               >
                 <option value="presencial">Presencial</option>
                 <option value="en_linea">En Línea</option>
@@ -205,7 +205,7 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Tipo de Examen <span className="text-red-500">*</span>
               </label>
               <select
@@ -216,7 +216,7 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
                     exam_type: e.target.value as 'propio' | 'cenaval',
                   })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
               >
                 <option value="propio">Propio</option>
                 <option value="cenaval">CENAVAL</option>
@@ -224,7 +224,7 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Fecha <span className="text-red-500">*</span>
               </label>
               <input
@@ -232,24 +232,24 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
                 value={formData.exam_date}
                 onChange={(e) => setFormData({ ...formData, exam_date: e.target.value })}
                 min={new Date().toISOString().split('T')[0]}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Hora <span className="text-red-500">*</span>
               </label>
               <input
                 type="time"
                 value={formData.exam_time}
                 onChange={(e) => setFormData({ ...formData, exam_time: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Calificación mínima aprobatoria (0–100)
               </label>
               <input
@@ -260,7 +260,7 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
                 onChange={(e) =>
                   setFormData({ ...formData, passing_score: e.target.value })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
               />
             </div>
           </div>
@@ -299,7 +299,7 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
           {/* Venues table */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-medium text-gray-900">Salones de Examen</h3>
+              <h3 className="font-medium text-gray-900 dark:text-gray-100">Salones de Examen</h3>
               <Button size="sm" variant="outline" onClick={handleAddVenue}>
                 <Plus size={14} className="mr-1" />
                 Agregar salón
@@ -310,13 +310,13 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
               {venues.map((venue, idx) => (
                 <div
                   key={idx}
-                  className="grid grid-cols-12 gap-2 items-center bg-gray-50 rounded-lg p-3"
+                  className="grid grid-cols-12 gap-2 items-center bg-gray-50 dark:bg-gray-700 rounded-lg p-3"
                 >
                   <div className="col-span-4">
                     <select
                       value={venue.program}
                       onChange={(e) => handleVenueChange(idx, 'program', e.target.value)}
-                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-600 dark:text-gray-100"
                     >
                       <option value="">Programa...</option>
                       {programs.map((p: { id: number; code: string; name: string }) => (
@@ -332,7 +332,7 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
                       placeholder="Edificio"
                       value={venue.building}
                       onChange={(e) => handleVenueChange(idx, 'building', e.target.value)}
-                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-600 dark:text-gray-100"
                     />
                   </div>
                   <div className="col-span-2">
@@ -341,7 +341,7 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
                       placeholder="Salón"
                       value={venue.room}
                       onChange={(e) => handleVenueChange(idx, 'room', e.target.value)}
-                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-600 dark:text-gray-100"
                     />
                   </div>
                   <div className="col-span-2">
@@ -351,7 +351,7 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
                       placeholder="Cap."
                       value={venue.capacity}
                       onChange={(e) => handleVenueChange(idx, 'capacity', e.target.value)}
-                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-600 dark:text-gray-100"
                     />
                   </div>
                   <div className="col-span-1 flex justify-center">
@@ -367,13 +367,13 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
                 </div>
               ))}
             </div>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               Columnas: Programa · Edificio · Salón · Capacidad
             </p>
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 p-6 border-t">
+        <div className="flex justify-end gap-3 p-6 border-t dark:border-gray-700">
           <Button variant="outline" onClick={onClose}>
             Cancelar
           </Button>
@@ -460,20 +460,20 @@ const GradingPanel = ({ session, onClose }: GradingPanelProps) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center overflow-y-auto py-8 px-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-5xl">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-5xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
+        <div className="flex items-center justify-between p-6 border-b dark:border-gray-700">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">{session.name}</h2>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{session.name}</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
               {session.period_name} · {session.exam_date} · Aprobatoria: {session.passing_score}
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-gray-600 dark:text-gray-400">
               {gradedCount}/{aspirants.length} calificados
             </span>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
               <X size={20} />
             </button>
           </div>
@@ -491,14 +491,14 @@ const GradingPanel = ({ session, onClose }: GradingPanelProps) => {
 
           {Object.entries(programGroups).map(([programCode, list]) => (
             <div key={programCode}>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
                 {programCode} — {list[0].program_name}
               </h3>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-200 text-left text-gray-500">
+                    <tr className="border-b border-gray-200 dark:border-gray-700 text-left text-gray-500 dark:text-gray-400">
                       <th className="pb-2 pr-4 font-medium">Aspirante</th>
                       <th className="pb-2 pr-4 font-medium">Sede</th>
                       <th className="pb-2 pr-4 font-medium">Estado</th>
@@ -507,17 +507,17 @@ const GradingPanel = ({ session, onClose }: GradingPanelProps) => {
                       <th className="pb-2" />
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                     {list.map((aspirant) => {
                       const isGraded =
                         aspirant.status === 'accepted' || aspirant.status === 'rejected';
                       return (
                         <tr key={aspirant.id}>
                           <td className="py-2.5 pr-4">
-                            <p className="font-medium text-gray-900">{aspirant.student_name}</p>
-                            <p className="text-xs text-gray-500">{aspirant.student_curp}</p>
+                            <p className="font-medium text-gray-900 dark:text-gray-100">{aspirant.student_name}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{aspirant.student_curp}</p>
                           </td>
-                          <td className="py-2.5 pr-4 text-xs text-gray-600">
+                          <td className="py-2.5 pr-4 text-xs text-gray-600 dark:text-gray-400">
                             {aspirant.exam_location ?? '—'}
                           </td>
                           <td className="py-2.5 pr-4">
@@ -536,10 +536,10 @@ const GradingPanel = ({ session, onClose }: GradingPanelProps) => {
 
                           {isGraded ? (
                             <>
-                              <td className="py-2.5 pr-4 text-xs text-gray-500">—</td>
+                              <td className="py-2.5 pr-4 text-xs text-gray-500 dark:text-gray-400">—</td>
                               <td className="py-2.5 pr-4">
                                 {aspirant.exam_score !== null ? (
-                                  <span className="font-mono font-bold text-gray-900">
+                                  <span className="font-mono font-bold text-gray-900 dark:text-gray-100">
                                     {aspirant.exam_score}
                                   </span>
                                 ) : (
@@ -603,7 +603,7 @@ const GradingPanel = ({ session, onClose }: GradingPanelProps) => {
                                         [aspirant.id]: e.target.value,
                                       }))
                                     }
-                                    className="w-24 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                                    className="w-24 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
                                   />
                                 )}
                               </td>
@@ -711,8 +711,8 @@ export const ExamSessions = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Exámenes de Admisión</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Exámenes de Admisión</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
             {isJefe
               ? 'Crea y publica sesiones de examen para aspirantes'
               : 'Consulta y califica aspirantes asignados a tu programa'}
@@ -735,7 +735,7 @@ export const ExamSessions = () => {
               setStatusFilter(e.target.value);
               setPage(1);
             }}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
           >
             <option value="">Todos los estados</option>
             <option value="draft">Borrador</option>
@@ -762,22 +762,22 @@ export const ExamSessions = () => {
               {data.results.map((session) => (
                 <div
                   key={session.id}
-                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                  className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-gray-300 dark:hover:border-gray-500 transition-colors"
                 >
                   <div className="flex items-start gap-4">
                     <div>
                       <div className="flex items-center gap-2 mb-0.5">
-                        <p className="font-semibold text-gray-900">{session.name}</p>
+                        <p className="font-semibold text-gray-900 dark:text-gray-100">{session.name}</p>
                         <Badge variant={STATUS_VARIANT[session.status] ?? 'default'}>
                           {session.status_display}
                         </Badge>
                       </div>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
                         {session.period_name} · {session.exam_date} a las {session.exam_time}
                         {' · '}
                         {session.mode === 'presencial' ? 'Presencial' : 'En Línea'}
                       </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                         {session.venue_count} salón{session.venue_count !== 1 ? 'es' : ''} ·{' '}
                         {session.total_capacity} lugares · Aprobatoria: {session.passing_score}
                       </p>
@@ -826,8 +826,8 @@ export const ExamSessions = () => {
             </div>
 
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
-                <p className="text-sm text-gray-500">{data.count} sesiones</p>
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <p className="text-sm text-gray-500 dark:text-gray-400">{data.count} sesiones</p>
                 <div className="flex items-center gap-2">
                   <Button
                     size="sm"
@@ -837,7 +837,7 @@ export const ExamSessions = () => {
                   >
                     <ChevronLeft size={16} />
                   </Button>
-                  <span className="text-sm text-gray-700">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
                     {page} / {totalPages}
                   </span>
                   <Button

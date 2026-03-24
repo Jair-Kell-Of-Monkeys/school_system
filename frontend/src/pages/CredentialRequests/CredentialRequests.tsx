@@ -67,8 +67,8 @@ export const CredentialRequests = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Solicitudes de Credencial</h1>
-        <p className="text-gray-600 mt-1">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Solicitudes de Credencial</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-1">
           Aprueba o rechaza las solicitudes de credencial de tus programas asignados.
         </p>
       </div>
@@ -77,26 +77,26 @@ export const CredentialRequests = () => {
       <div className="grid grid-cols-3 gap-4">
         <Card className="text-center">
           <p className="text-2xl font-bold text-yellow-600">{pending.length}</p>
-          <p className="text-sm text-gray-600">Pendientes</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Pendientes</p>
         </Card>
         <Card className="text-center">
           <p className="text-2xl font-bold text-green-600">
             {requests.filter((r) => r.status === 'generada').length}
           </p>
-          <p className="text-sm text-gray-600">Generadas</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Generadas</p>
         </Card>
         <Card className="text-center">
           <p className="text-2xl font-bold text-red-600">
             {requests.filter((r) => r.status === 'rechazada').length}
           </p>
-          <p className="text-sm text-gray-600">Rechazadas</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Rechazadas</p>
         </Card>
       </div>
 
       {/* Pendientes */}
       {pending.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-3">Pendientes de revisión</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Pendientes de revisión</h2>
           <div className="space-y-4">
             {pending.map((req) => (
               <RequestCard
@@ -133,7 +133,7 @@ export const CredentialRequests = () => {
       {/* Revisadas */}
       {reviewed.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-3">Revisadas</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Revisadas</h2>
           <div className="space-y-3">
             {reviewed.map((req) => (
               <Card key={req.id} className="opacity-80">
@@ -141,8 +141,8 @@ export const CredentialRequests = () => {
                   <div className="flex items-center gap-3">
                     <User size={20} className="text-gray-400" />
                     <div>
-                      <p className="font-medium text-gray-900">{req.student_name}</p>
-                      <p className="text-sm text-gray-500">
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{req.student_name}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
                         {req.matricula} — {req.program_code}
                       </p>
                     </div>
@@ -164,8 +164,8 @@ export const CredentialRequests = () => {
         <Card>
           <div className="text-center py-12">
             <Award className="mx-auto text-gray-300 mb-4" size={48} />
-            <h3 className="text-lg font-medium text-gray-900">Sin solicitudes</h3>
-            <p className="text-gray-500 mt-1">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Sin solicitudes</h3>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">
               Aún no hay solicitudes de credencial para tus programas.
             </p>
           </div>
@@ -212,10 +212,10 @@ const RequestCard = ({
           <img
             src={req.photo_url}
             alt={req.student_name}
-            className="w-16 h-20 object-cover rounded-lg border border-gray-200 flex-shrink-0"
+            className="w-16 h-20 object-cover rounded-lg border border-gray-200 dark:border-gray-600 flex-shrink-0"
           />
         ) : (
-          <div className="w-16 h-20 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+          <div className="w-16 h-20 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center flex-shrink-0">
             <User size={24} className="text-gray-400" />
           </div>
         )}
@@ -223,12 +223,12 @@ const RequestCard = ({
         <div className="flex-1">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <h3 className="font-semibold text-gray-900">{req.student_name}</h3>
-              <p className="text-sm text-gray-600">
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">{req.student_name}</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 {req.matricula} — {req.program_name} ({req.program_code})
               </p>
-              <p className="text-sm text-gray-500">Periodo: {req.period_name}</p>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-sm text-gray-500 dark:text-gray-400">Periodo: {req.period_name}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                 Convocatoria: {req.convocatoria_title}
               </p>
             </div>
@@ -255,7 +255,7 @@ const RequestCard = ({
 
           {isRejectingThis2 && (
             <div className="mt-3 space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Motivo de rechazo <span className="text-red-500">*</span>
               </label>
               <textarea
@@ -263,7 +263,7 @@ const RequestCard = ({
                 onChange={(e) => onReasonChange(e.target.value)}
                 rows={2}
                 placeholder="Describe el motivo del rechazo..."
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 dark:bg-gray-700 dark:text-gray-100"
               />
               {rejectError && <p className="text-xs text-red-600">{rejectError}</p>}
               <div className="flex gap-2">

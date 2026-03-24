@@ -98,20 +98,20 @@ export const PaymentValidationModal = ({
       <div className="flex items-center justify-center min-h-screen px-4">
         <div className="fixed inset-0 bg-black opacity-50" onClick={onClose}></div>
 
-        <div className="relative bg-white rounded-lg max-w-3xl w-full shadow-xl">
+        <div className="relative bg-white dark:bg-gray-800 rounded-lg max-w-3xl w-full shadow-xl">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 Validación de Pago
               </h2>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 Comprobante #{payment.receipt_number}
               </p>
             </div>
             <div className="flex items-center space-x-4">
               {getStatusBadge(payment.status)}
-              <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+              <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                 <X size={24} />
               </button>
             </div>
@@ -121,14 +121,14 @@ export const PaymentValidationModal = ({
           <div className="p-6 space-y-6">
             {/* Información del Pago */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 Detalles del Pago
               </h3>
-              <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
+              <div className="grid grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
                 <div className="flex items-start">
                   <DollarSign className="text-gray-400 mr-3 mt-1" size={20} />
                   <div>
-                    <p className="text-sm text-gray-600">Monto</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Monto</p>
                     <p className="text-2xl font-bold text-green-600">
                       {formatAmount(payment.amount)}
                     </p>
@@ -138,8 +138,8 @@ export const PaymentValidationModal = ({
                 <div className="flex items-start">
                   <CreditCard className="text-gray-400 mr-3 mt-1" size={20} />
                   <div>
-                    <p className="text-sm text-gray-600">Tipo de Pago</p>
-                    <p className="font-medium text-gray-900">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Tipo de Pago</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">
                       {payment.payment_type_display}
                     </p>
                   </div>
@@ -148,8 +148,8 @@ export const PaymentValidationModal = ({
                 <div className="flex items-start">
                   <Calendar className="text-gray-400 mr-3 mt-1" size={20} />
                   <div>
-                    <p className="text-sm text-gray-600">Fecha de Pago</p>
-                    <p className="font-medium text-gray-900">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Fecha de Pago</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">
                       {new Date(payment.payment_date).toLocaleDateString('es-MX', {
                         year: 'numeric',
                         month: 'long',
@@ -162,8 +162,8 @@ export const PaymentValidationModal = ({
                 <div className="flex items-start">
                   <FileText className="text-gray-400 mr-3 mt-1" size={20} />
                   <div>
-                    <p className="text-sm text-gray-600">No. de Recibo</p>
-                    <p className="font-medium text-gray-900">{payment.receipt_number}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">No. de Recibo</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">{payment.receipt_number}</p>
                   </div>
                 </div>
               </div>
@@ -171,7 +171,7 @@ export const PaymentValidationModal = ({
 
             {/* Información del Aspirante */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 Información del Aspirante
               </h3>
               <div className="grid grid-cols-2 gap-4 bg-blue-50 p-4 rounded-lg">
@@ -217,12 +217,12 @@ export const PaymentValidationModal = ({
 
             {/* Comprobante de Pago */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 Comprobante de Pago
               </h3>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
                 <FileText className="mx-auto text-gray-400 mb-3" size={48} />
-                <p className="text-sm text-gray-600 mb-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                   Archivo subido el{' '}
                   {new Date(payment.created_at).toLocaleDateString('es-MX')}
                 </p>
@@ -288,7 +288,7 @@ export const PaymentValidationModal = ({
             {/* Acciones de Validación (solo si está pendiente) */}
             {payment.status === 'pending' && (
               <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <h4 className="font-semibold text-gray-900 mb-3">
+                <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
                   Validar Comprobante de Pago
                 </h4>
                 <textarea
@@ -321,7 +321,7 @@ export const PaymentValidationModal = ({
           </div>
 
           {/* Footer */}
-          <div className="flex justify-end p-6 border-t border-gray-200">
+          <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700">
             <Button variant="outline" onClick={onClose}>
               Cerrar
             </Button>

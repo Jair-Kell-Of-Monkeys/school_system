@@ -109,14 +109,14 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center overflow-y-auto py-8 px-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-3xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
+        <div className="flex items-center justify-between p-6 border-b dark:border-gray-700">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
               Inscripción — {enrollment.matricula}
             </h2>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
               {enrollment.student_name} · {enrollment.program_code}
             </p>
           </div>
@@ -124,14 +124,14 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
             <Badge variant={STATUS_VARIANTS[enrollment.status] ?? 'default'}>
               {enrollment.status_display}
             </Badge>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
               <X size={20} />
             </button>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-gray-200">
+        <div className="border-b border-gray-200 dark:border-gray-700">
           <nav className="flex px-6">
             {[
               { id: 'info' as const, label: 'Información' },
@@ -146,7 +146,7 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
                 className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === id
                     ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300'
                 }`}
               >
                 {label}
@@ -160,46 +160,46 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
           {activeTab === 'info' && (
             <div className="space-y-6">
               <section>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
                   Información del Estudiante
                 </h3>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
                   <div>
-                    <span className="text-gray-500">Nombre:</span>{' '}
-                    <span className="font-medium text-gray-900">{enrollment.student_name}</span>
+                    <span className="text-gray-500 dark:text-gray-400">Nombre:</span>{' '}
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{enrollment.student_name}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500">CURP:</span>{' '}
-                    <span className="font-medium text-gray-900">{enrollment.student_curp}</span>
+                    <span className="text-gray-500 dark:text-gray-400">CURP:</span>{' '}
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{enrollment.student_curp}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Programa:</span>{' '}
-                    <span className="font-medium text-gray-900">
+                    <span className="text-gray-500 dark:text-gray-400">Programa:</span>{' '}
+                    <span className="font-medium text-gray-900 dark:text-gray-100">
                       {enrollment.program_code} — {enrollment.program_name}
                     </span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Periodo:</span>{' '}
-                    <span className="font-medium text-gray-900">{enrollment.period_name}</span>
+                    <span className="text-gray-500 dark:text-gray-400">Periodo:</span>{' '}
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{enrollment.period_name}</span>
                   </div>
                   {enrollment.student?.institutional_email && (
                     <div className="col-span-2">
-                      <span className="text-gray-500">Correo institucional:</span>{' '}
-                      <span className="font-medium text-gray-900">
+                      <span className="text-gray-500 dark:text-gray-400">Correo institucional:</span>{' '}
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
                         {enrollment.student.institutional_email}
                       </span>
                     </div>
                   )}
                   {enrollment.group && (
                     <div>
-                      <span className="text-gray-500">Grupo:</span>{' '}
-                      <span className="font-medium text-gray-900">{enrollment.group}</span>
+                      <span className="text-gray-500 dark:text-gray-400">Grupo:</span>{' '}
+                      <span className="font-medium text-gray-900 dark:text-gray-100">{enrollment.group}</span>
                     </div>
                   )}
                   {enrollment.schedule && (
                     <div>
-                      <span className="text-gray-500">Horario:</span>{' '}
-                      <span className="font-medium text-gray-900">{enrollment.schedule}</span>
+                      <span className="text-gray-500 dark:text-gray-400">Horario:</span>{' '}
+                      <span className="font-medium text-gray-900 dark:text-gray-100">{enrollment.schedule}</span>
                     </div>
                   )}
                 </div>
@@ -208,7 +208,7 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
               {/* Asignar grupo/horario (si aún no se ha asignado) */}
               {!enrollment.group && enrollment.status === 'pending_docs' && (
                 <section>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
                     Asignar Grupo y Horario
                   </h3>
                   {!showConfirmForm ? (
@@ -216,9 +216,9 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
                       Asignar Grupo y Horario
                     </Button>
                   ) : (
-                    <div className="space-y-3 border border-gray-200 rounded-lg p-4">
+                    <div className="space-y-3 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Grupo <span className="text-red-500">*</span>
                         </label>
                         <Input
@@ -228,7 +228,7 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Horario <span className="text-red-500">*</span>
                         </label>
                         <Input
@@ -262,7 +262,7 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
               {/* Estado de documentos requeridos */}
               {enrollment.status === 'pending_docs' && (
                 <section>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
                     Estado de Documentos
                   </h3>
                   {allRequiredApproved ? (
@@ -294,11 +294,11 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
                 enrollment.documents.map((doc: EnrollmentDocument) => {
                   const hasFile = !!doc.file_name;
                   return (
-                    <div key={doc.id} className="border border-gray-200 rounded-lg p-4">
+                    <div key={doc.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <FileText size={16} className="text-gray-400" />
-                          <span className="font-medium text-gray-900 text-sm">
+                          <span className="font-medium text-gray-900 dark:text-gray-100 text-sm">
                             {doc.document_type_display}
                           </span>
                         </div>
@@ -309,7 +309,7 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
 
                       {hasFile && (
                         <>
-                          <p className="text-xs text-gray-500 mb-2">{doc.file_name}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{doc.file_name}</p>
 
                           {doc.file_url && (
                             <a
@@ -342,7 +342,7 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
                                     [doc.id]: e.target.value,
                                   }))
                                 }
-                                className="w-full text-sm px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                                className="w-full text-sm px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none dark:bg-gray-700 dark:text-gray-100"
                               />
                               <div className="flex gap-2">
                                 <Button
@@ -445,8 +445,8 @@ export const Enrollments = () => {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Inscripciones</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Inscripciones</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
             Revisión de documentos y confirmación de inscripciones formales
           </p>
         </div>
@@ -483,7 +483,7 @@ export const Enrollments = () => {
               setStatusFilter(e.target.value);
               setPage(1);
             }}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
           >
             <option value="">Todos los estados</option>
             <option value="pending_docs">Documentos Pendientes</option>
@@ -510,7 +510,7 @@ export const Enrollments = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200 text-left text-gray-500">
+                  <tr className="border-b border-gray-200 dark:border-gray-700 text-left text-gray-500 dark:text-gray-400">
                     <th className="pb-3 pr-4 font-medium">Matrícula</th>
                     <th className="pb-3 pr-4 font-medium">Estudiante</th>
                     <th className="pb-3 pr-4 font-medium">Programa</th>
@@ -519,7 +519,7 @@ export const Enrollments = () => {
                     <th className="pb-3" />
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                   {data.results.map((enrollment) => {
                     const pendingDocs = enrollment.documents?.filter(
                       (d) => d.status === 'pending'
@@ -529,17 +529,17 @@ export const Enrollments = () => {
                     ).length ?? 0;
 
                     return (
-                      <tr key={enrollment.id} className="hover:bg-gray-50">
-                        <td className="py-3 pr-4 font-mono font-semibold text-gray-900">
+                      <tr key={enrollment.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td className="py-3 pr-4 font-mono font-semibold text-gray-900 dark:text-gray-100">
                           {enrollment.matricula}
                         </td>
                         <td className="py-3 pr-4">
-                          <p className="font-medium text-gray-900">{enrollment.student_name}</p>
-                          <p className="text-xs text-gray-500">{enrollment.student_curp}</p>
+                          <p className="font-medium text-gray-900 dark:text-gray-100">{enrollment.student_name}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{enrollment.student_curp}</p>
                         </td>
                         <td className="py-3 pr-4">
-                          <p className="font-medium text-gray-900">{enrollment.program_code}</p>
-                          <p className="text-xs text-gray-500">{enrollment.period_name}</p>
+                          <p className="font-medium text-gray-900 dark:text-gray-100">{enrollment.program_code}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{enrollment.period_name}</p>
                         </td>
                         <td className="py-3 pr-4">
                           <Badge variant={STATUS_VARIANTS[enrollment.status] ?? 'default'}>
@@ -585,8 +585,8 @@ export const Enrollments = () => {
 
             {/* Paginación */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
-                <p className="text-sm text-gray-500">
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   {data.count} inscripción{data.count !== 1 ? 'es' : ''}
                 </p>
                 <div className="flex items-center gap-2">
@@ -598,7 +598,7 @@ export const Enrollments = () => {
                   >
                     <ChevronLeft size={16} />
                   </Button>
-                  <span className="text-sm text-gray-700">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
                     {page} / {totalPages}
                   </span>
                   <Button

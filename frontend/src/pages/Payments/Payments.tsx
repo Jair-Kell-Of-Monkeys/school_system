@@ -65,8 +65,8 @@ export const Payments = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Validación de Pagos</h1>
-        <p className="text-gray-600 mt-1">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Validación de Pagos</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-1">
           Revisa y valida los comprobantes de pago de los aspirantes
         </p>
       </div>
@@ -77,8 +77,8 @@ export const Payments = () => {
           <Card>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Pagos</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{stats.total}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Total Pagos</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-2">{stats.total}</p>
               </div>
               <DollarSign className="text-primary-600" size={40} />
             </div>
@@ -87,7 +87,7 @@ export const Payments = () => {
           <Card>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Pendientes</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Pendientes</p>
                 <p className="text-3xl font-bold text-yellow-600 mt-2">{stats.pending}</p>
               </div>
               <Clock className="text-yellow-600" size={40} />
@@ -97,7 +97,7 @@ export const Payments = () => {
           <Card>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Validados</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Validados</p>
                 <p className="text-3xl font-bold text-green-600 mt-2">{stats.validated}</p>
               </div>
               <CheckCircle className="text-green-600" size={40} />
@@ -107,7 +107,7 @@ export const Payments = () => {
           <Card>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Rechazados</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Rechazados</p>
                 <p className="text-3xl font-bold text-red-600 mt-2">{stats.rejected}</p>
               </div>
               <XCircle className="text-red-600" size={40} />
@@ -117,7 +117,7 @@ export const Payments = () => {
           <Card>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Monto Total</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Monto Total</p>
                 <p className="text-2xl font-bold text-green-600 mt-2">
                   {formatAmount(stats.total_amount)}
                 </p>
@@ -130,16 +130,16 @@ export const Payments = () => {
 
       {/* Resumen de Pagos Pendientes */}
       {stats && stats.pending > 0 && (
-        <Card className="border-l-4 border-yellow-500 bg-yellow-50">
+        <Card className="border-l-4 border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-700">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-yellow-900">
+              <h3 className="text-lg font-semibold text-yellow-900 dark:text-yellow-200">
                 Pagos Pendientes de Validación
               </h3>
-              <p className="text-sm text-yellow-700 mt-1">
+              <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
                 Hay {stats.pending} comprobantes esperando tu revisión
               </p>
-              <p className="text-sm text-yellow-700">
+              <p className="text-sm text-yellow-700 dark:text-yellow-300">
                 Monto pendiente: <span className="font-bold">{formatAmount(stats.pending_amount)}</span>
               </p>
             </div>
@@ -169,7 +169,7 @@ export const Payments = () => {
             </div>
 
             <select
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
               value={filters.status}
               onChange={(e) => setFilters({ ...filters, status: e.target.value })}
             >
@@ -180,7 +180,7 @@ export const Payments = () => {
             </select>
 
             <select
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
               value={filters.payment_type}
               onChange={(e) => setFilters({ ...filters, payment_type: e.target.value })}
             >
@@ -212,8 +212,8 @@ export const Payments = () => {
 
       {/* Tabla de Pagos */}
       <Card padding="none">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
             Lista de Pagos ({paymentsData?.count || 0})
           </h2>
         </div>
@@ -225,8 +225,8 @@ export const Payments = () => {
 
         {/* Paginación */}
         {paymentsData && paymentsData.count > 0 && (
-          <div className="p-6 border-t border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-600">
+          <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
               Mostrando {((page - 1) * 20) + 1} - {Math.min(page * 20, paymentsData.count)} de{' '}
               {paymentsData.count}
             </div>

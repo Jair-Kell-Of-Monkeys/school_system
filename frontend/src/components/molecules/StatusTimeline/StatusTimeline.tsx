@@ -50,7 +50,7 @@ export const StatusTimeline = ({ steps }: StatusTimelineProps) => {
             {index !== steps.length - 1 && (
               <div
                 className={`absolute left-4 top-8 h-full w-0.5 ${
-                  step.status === 'completed' ? 'bg-green-400' : 'bg-gray-200'
+                  step.status === 'completed' ? 'bg-green-400' : 'bg-gray-200 dark:bg-gray-600'
                 }`}
               />
             )}
@@ -86,14 +86,14 @@ export const StatusTimeline = ({ steps }: StatusTimelineProps) => {
                 <p
                   className={`text-sm ${
                     isActive
-                      ? 'font-semibold text-gray-900'
-                      : 'font-medium text-gray-400'
+                      ? 'font-semibold text-gray-900 dark:text-gray-100'
+                      : 'font-medium text-gray-400 dark:text-gray-500'
                   }`}
                 >
                   {step.label}
                 </p>
                 {step.description && (
-                  <p className="text-xs text-gray-500 mt-0.5">{step.description}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{step.description}</p>
                 )}
               </div>
             </div>

@@ -37,14 +37,14 @@ export function Table<T extends { id: string | number }>({
 
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead className="bg-gray-50 dark:bg-gray-800">
           <tr>
             {columns.map((column, idx) => (
               <th
                 key={idx}
                 className={clsx(
-                  'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
+                  'px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider',
                   column.className
                 )}
               >
@@ -53,11 +53,11 @@ export function Table<T extends { id: string | number }>({
             ))}
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
           {data.map((row) => (
-            <tr key={row.id} className="hover:bg-gray-50">
+            <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
               {columns.map((column, idx) => (
-                <td key={idx} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td key={idx} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                   {typeof column.accessor === 'function'
                     ? column.accessor(row)
                     : String(row[column.accessor])}

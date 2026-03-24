@@ -46,8 +46,8 @@ export const Students = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Estudiantes</h1>
-        <p className="text-gray-600 mt-1">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Estudiantes</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-1">
           Lista completa de aspirantes y alumnos
         </p>
       </div>
@@ -58,8 +58,8 @@ export const Students = () => {
           <Card>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Total</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-2">
                   {stats.total || studentsData?.count || 0}
                 </p>
               </div>
@@ -70,7 +70,7 @@ export const Students = () => {
           <Card>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Aspirantes</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Aspirantes</p>
                 <p className="text-3xl font-bold text-yellow-600 mt-2">
                   {stats.aspirantes || 0}
                 </p>
@@ -82,7 +82,7 @@ export const Students = () => {
           <Card>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Alumnos</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Alumnos</p>
                 <p className="text-3xl font-bold text-green-600 mt-2">
                   {stats.alumnos || 0}
                 </p>
@@ -94,7 +94,7 @@ export const Students = () => {
           <Card>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Fotos Pendientes</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Fotos Pendientes</p>
                 <p className="text-3xl font-bold text-orange-600 mt-2">
                   {stats.fotos_pendientes || 0}
                 </p>
@@ -118,7 +118,7 @@ export const Students = () => {
             </div>
 
             <select
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
               value={filters.gender}
               onChange={(e) => setFilters({ ...filters, gender: e.target.value })}
             >
@@ -129,7 +129,7 @@ export const Students = () => {
             </select>
 
             <select
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
               value={filters.photo_status}
               onChange={(e) => setFilters({ ...filters, photo_status: e.target.value })}
             >
@@ -161,8 +161,8 @@ export const Students = () => {
 
       {/* Tabla de Estudiantes */}
       <Card padding="none">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
             Lista de Estudiantes ({studentsData?.count || 0})
           </h2>
         </div>
@@ -174,8 +174,8 @@ export const Students = () => {
 
         {/* Paginación */}
         {studentsData && studentsData.count > 0 && (
-          <div className="p-6 border-t border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-600">
+          <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
               Mostrando {((page - 1) * 20) + 1} - {Math.min(page * 20, studentsData.count)} de {studentsData.count}
             </div>
             <div className="flex space-x-2">

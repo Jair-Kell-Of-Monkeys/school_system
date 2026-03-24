@@ -429,8 +429,8 @@ export const MyApplication = () => {
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="text-center">
           <FileText className="mx-auto text-primary-600 mb-4" size={64} />
-          <h1 className="text-3xl font-bold text-gray-900">Solicitud de Admisión</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Solicitud de Admisión</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
             Aún no tienes una solicitud activa. Crea una para comenzar tu proceso de admisión.
           </p>
         </div>
@@ -443,18 +443,18 @@ export const MyApplication = () => {
           </Card>
         ) : (
           <Card>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
               Nueva Solicitud de Admisión
             </h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Programa Académico
                 </label>
                 <select
                   value={formData.program}
                   onChange={(e) => setFormData({ ...formData, program: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
                 >
                   <option value="">Selecciona un programa...</option>
                   {programs.map((program: any) => (
@@ -466,13 +466,13 @@ export const MyApplication = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Periodo
                 </label>
                 <select
                   value={formData.period}
                   onChange={(e) => setFormData({ ...formData, period: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
                 >
                   <option value="">Selecciona un periodo...</option>
                   {periods.map((period: any) => (
@@ -517,8 +517,8 @@ export const MyApplication = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Mi Solicitud de Admisión</h1>
-        <p className="text-gray-600 mt-1">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Mi Solicitud de Admisión</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-1">
           Programa: {application.program?.code} - {application.program?.name}
         </p>
       </div>
@@ -526,7 +526,7 @@ export const MyApplication = () => {
       {/* Estado actual */}
       <Card>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">Estado Actual</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Estado Actual</h2>
           <Badge
             variant={
               application.status === 'accepted'
@@ -598,7 +598,7 @@ export const MyApplication = () => {
         <Card>
           <div className="flex items-center mb-5">
             <CreditCard className="text-primary-600 mr-3 flex-shrink-0" size={24} />
-            <h2 className="text-xl font-semibold text-gray-900">Pago de Examen de Admisión</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Pago de Examen de Admisión</h2>
           </div>
 
           {/* Monto */}
@@ -614,7 +614,7 @@ export const MyApplication = () => {
           {/* Sin pago creado */}
           {!isPaymentLoading && !payment && (
             <div className="text-center py-2">
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 Genera tu ficha para obtener el número de referencia bancaria y realizar el
                 depósito.
               </p>
@@ -648,9 +648,9 @@ export const MyApplication = () => {
               )}
 
               {/* Número de referencia */}
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                <p className="text-xs text-gray-500 mb-1">Número de referencia</p>
-                <p className="text-lg font-mono font-bold text-gray-900 tracking-wider">
+              <div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Número de referencia</p>
+                <p className="text-lg font-mono font-bold text-gray-900 dark:text-gray-100 tracking-wider">
                   {payment.receipt_number}
                 </p>
               </div>
@@ -669,14 +669,14 @@ export const MyApplication = () => {
               {/* Formulario para subir comprobante */}
               {showUploadForm && (
                 <div className="border-t pt-4 space-y-3">
-                  <h4 className="font-medium text-gray-900">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100">
                     {payment.status === 'rejected'
                       ? 'Subir nuevo comprobante'
                       : 'Subir comprobante de pago'}
                   </h4>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Fecha en que realizaste el pago{' '}
                       <span className="text-red-500">*</span>
                     </label>
@@ -686,12 +686,12 @@ export const MyApplication = () => {
                       onChange={(e) => setPaymentDate(e.target.value)}
                       min={payment.created_at.slice(0, 10)}
                       max={new Date().toISOString().split('T')[0]}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Archivo del comprobante{' '}
                       <span className="text-red-500">*</span>
                     </label>
@@ -699,9 +699,9 @@ export const MyApplication = () => {
                       type="file"
                       accept=".pdf,.jpg,.jpeg,.png"
                       onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)}
-                      className="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 cursor-pointer"
+                      className="w-full text-sm text-gray-600 dark:text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 cursor-pointer"
                     />
-                    <p className="text-xs text-gray-500 mt-1">PDF, JPG o PNG — máx. 5 MB</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">PDF, JPG o PNG — máx. 5 MB</p>
                   </div>
 
                   <Button
@@ -761,11 +761,11 @@ export const MyApplication = () => {
           <div className="flex items-start mb-4">
             <Calendar className="text-primary-600 mr-3 mt-1" size={24} />
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 Examen de Admisión Programado
               </h3>
               <div className="mt-2 space-y-1">
-                <p className="text-gray-700">
+                <p className="text-gray-700 dark:text-gray-300">
                   <span className="font-medium">Fecha:</span>{' '}
                   {new Date(application.exam_date).toLocaleDateString('es-MX', {
                     year: 'numeric',
@@ -775,12 +775,12 @@ export const MyApplication = () => {
                     minute: '2-digit',
                   })}
                 </p>
-                <p className="text-gray-700">
+                <p className="text-gray-700 dark:text-gray-300">
                   <span className="font-medium">Modalidad:</span>{' '}
                   {application.exam_mode === 'presencial' ? 'Presencial' : 'En Línea'}
                 </p>
                 {application.exam_location && (
-                  <p className="text-gray-700">
+                  <p className="text-gray-700 dark:text-gray-300">
                     <span className="font-medium">Ubicación:</span>{' '}
                     {application.exam_location}
                   </p>
@@ -797,7 +797,7 @@ export const MyApplication = () => {
           <div className="flex items-start">
             <CheckCircle className="text-green-600 mr-3 mt-1" size={24} />
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Calificación del Examen</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Calificación del Examen</h3>
               <p className="text-4xl font-bold text-green-600 mt-2">
                 {application.exam_score}/100
               </p>
@@ -840,33 +840,33 @@ export const MyApplication = () => {
               </div>
 
               {/* Tarjeta de credenciales */}
-              <div className="bg-white px-8 py-6">
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
+              <div className="bg-white dark:bg-gray-800 px-8 py-6">
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">
                   Credenciales institucionales
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <p className="text-xs text-gray-500 mb-1">Matrícula</p>
-                    <p className="text-xl font-mono font-bold text-gray-900 tracking-widest">
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Matrícula</p>
+                    <p className="text-xl font-mono font-bold text-gray-900 dark:text-gray-100 tracking-widest">
                       {enrollment.matricula}
                     </p>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <p className="text-xs text-gray-500 mb-1">Correo institucional</p>
-                    <p className="text-sm font-medium text-gray-900 break-all">
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Correo institucional</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 break-all">
                       {enrollment.student?.institutional_email ?? `${enrollment.matricula}@universidad.edu.mx`}
                     </p>
                   </div>
                   {enrollment.group && (
-                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <p className="text-xs text-gray-500 mb-1">Grupo</p>
-                      <p className="font-semibold text-gray-900">{enrollment.group}</p>
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Grupo</p>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">{enrollment.group}</p>
                     </div>
                   )}
                   {enrollment.schedule && (
-                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <p className="text-xs text-gray-500 mb-1">Horario</p>
-                      <p className="font-semibold text-gray-900">{enrollment.schedule}</p>
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Horario</p>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">{enrollment.schedule}</p>
                     </div>
                   )}
                 </div>
@@ -883,7 +883,7 @@ export const MyApplication = () => {
                   </Button>
                 </div>
 
-                <p className="text-xs text-gray-400 mt-4">
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-4">
                   Conserva tu comprobante. Para activar tu correo institucional, acude a Servicios Escolares con identificación oficial.
                 </p>
               </div>
@@ -912,41 +912,41 @@ export const MyApplication = () => {
                 {!myCredentialRequest && activeConvocatoria && (
                   <div className="space-y-4">
                     <div className="bg-white border border-blue-200 rounded-lg p-4">
-                      <p className="font-medium text-gray-900 mb-1">
+                      <p className="font-medium text-gray-900 dark:text-gray-100 mb-1">
                         {activeConvocatoria.title}
                       </p>
                       {activeConvocatoria.description && (
-                        <p className="text-sm text-gray-600 mb-2">
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                           {activeConvocatoria.description}
                         </p>
                       )}
                       {activeConvocatoria.requirements && (
-                        <div className="text-xs text-gray-500 bg-yellow-50 border border-yellow-200 rounded p-2">
+                        <div className="text-xs text-gray-500 dark:text-gray-400 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded p-2">
                           <span className="font-medium">Requisitos de fotografía:</span>{' '}
                           {activeConvocatoria.requirements}
                         </div>
                       )}
-                      <p className="text-xs text-gray-400 mt-2">
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
                         Cierre: {activeConvocatoria.fecha_fin}
                       </p>
                     </div>
 
                     <div className="bg-white border border-blue-200 rounded-lg p-4 space-y-1">
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
                         Verifica tus datos antes de solicitar
                       </p>
-                      <p className="text-sm text-gray-700">
+                      <p className="text-sm text-gray-700 dark:text-gray-300">
                         <span className="font-medium">Nombre:</span>{' '}
                         {enrollment.student?.first_name} {enrollment.student?.last_name}
                       </p>
-                      <p className="text-sm text-gray-700">
+                      <p className="text-sm text-gray-700 dark:text-gray-300">
                         <span className="font-medium">Matrícula:</span> {enrollment.matricula}
                       </p>
-                      <p className="text-sm text-gray-700">
+                      <p className="text-sm text-gray-700 dark:text-gray-300">
                         <span className="font-medium">Programa:</span>{' '}
                         {enrollment.program?.name}
                       </p>
-                      <p className="text-sm text-gray-700">
+                      <p className="text-sm text-gray-700 dark:text-gray-300">
                         <span className="font-medium">Periodo:</span>{' '}
                         {enrollment.period?.name}
                       </p>
@@ -1044,7 +1044,7 @@ export const MyApplication = () => {
             <Card>
               <div className="flex items-center mb-5">
                 <BookOpen className="text-primary-600 mr-3 flex-shrink-0" size={24} />
-                <h2 className="text-xl font-semibold text-gray-900">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                   Documentos de Inscripción
                 </h2>
               </div>
@@ -1057,7 +1057,7 @@ export const MyApplication = () => {
                   </p>
                 </div>
               ) : enrollment.status === 'pending_docs' ? (
-                <p className="text-sm text-gray-600 mb-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                   Sube los siguientes documentos para continuar con tu inscripción:
                 </p>
               ) : null}
@@ -1072,10 +1072,10 @@ export const MyApplication = () => {
                   return (
                     <div
                       key={key}
-                      className="border border-gray-200 rounded-lg p-4"
+                      className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <p className="font-medium text-gray-900">{label}</p>
+                        <p className="font-medium text-gray-900 dark:text-gray-100">{label}</p>
                         {uploaded && (
                           <Badge
                             variant={
@@ -1099,7 +1099,7 @@ export const MyApplication = () => {
                       )}
 
                       {uploaded && !isPlaceholder && uploaded.status !== 'rejected' ? (
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
                           Archivo: {uploaded.file_name}
                         </p>
                       ) : (
@@ -1114,7 +1114,7 @@ export const MyApplication = () => {
                               }))
                             }
                             disabled={!canUpload}
-                            className="flex-1 text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 cursor-pointer"
+                            className="flex-1 text-sm text-gray-600 dark:text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 cursor-pointer"
                           />
                           <Button
                             size="sm"
@@ -1142,7 +1142,7 @@ export const MyApplication = () => {
             <Card>
               <div className="flex items-center mb-5">
                 <CreditCard className="text-primary-600 mr-3 flex-shrink-0" size={24} />
-                <h2 className="text-xl font-semibold text-gray-900">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                   Pago de Inscripción
                 </h2>
               </div>
@@ -1162,7 +1162,7 @@ export const MyApplication = () => {
 
               {!isEnrollPaymentLoading && !enrollmentPayment && (
                 <div className="text-center py-2">
-                  <p className="text-sm text-gray-600 mb-4">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                     Genera tu ficha de pago para obtener el número de referencia bancaria.
                   </p>
                   <Button
@@ -1193,9 +1193,9 @@ export const MyApplication = () => {
                     </div>
                   )}
 
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-1">Número de referencia</p>
-                    <p className="text-lg font-mono font-bold text-gray-900 tracking-wider">
+                  <div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-3">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Número de referencia</p>
+                    <p className="text-lg font-mono font-bold text-gray-900 dark:text-gray-100 tracking-wider">
                       {enrollmentPayment.receipt_number}
                     </p>
                   </div>
@@ -1214,14 +1214,14 @@ export const MyApplication = () => {
                     (enrollmentPayment.status === 'pending' &&
                       enrollment.status === 'pending_payment')) && (
                     <div className="border-t pt-4 space-y-3">
-                      <h4 className="font-medium text-gray-900">
+                      <h4 className="font-medium text-gray-900 dark:text-gray-100">
                         {enrollmentPayment.status === 'rejected'
                           ? 'Subir nuevo comprobante'
                           : 'Subir comprobante de pago'}
                       </h4>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Fecha en que realizaste el pago{' '}
                           <span className="text-red-500">*</span>
                         </label>
@@ -1231,12 +1231,12 @@ export const MyApplication = () => {
                           onChange={(e) => setEnrollmentPaymentDate(e.target.value)}
                           min={enrollmentPayment.created_at.slice(0, 10)}
                           max={new Date().toISOString().split('T')[0]}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Archivo del comprobante{' '}
                           <span className="text-red-500">*</span>
                         </label>
@@ -1246,9 +1246,9 @@ export const MyApplication = () => {
                           onChange={(e) =>
                             setEnrollmentReceiptFile(e.target.files?.[0] ?? null)
                           }
-                          className="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 cursor-pointer"
+                          className="w-full text-sm text-gray-600 dark:text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 cursor-pointer"
                         />
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                           PDF, JPG o PNG — máx. 5 MB
                         </p>
                       </div>
@@ -1324,7 +1324,7 @@ export const MyApplication = () => {
 
       {/* Documentos */}
       <Card>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Documentos</h2>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Documentos</h2>
         <DocumentUploader application={application} />
       </Card>
 
@@ -1332,10 +1332,10 @@ export const MyApplication = () => {
       {application.status === 'draft' && (
         <Card className="bg-primary-50">
           <div className="text-center">
-            <h3 className="font-semibold text-gray-900 mb-2">
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
               ¿Listo para enviar tu solicitud?
             </h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
               Asegúrate de haber subido todos los documentos requeridos antes de enviar.
             </p>
             <Button

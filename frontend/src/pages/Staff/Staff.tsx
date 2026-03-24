@@ -66,10 +66,10 @@ export const Staff = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             Gestión de Encargados
           </h1>
-          <p className="text-gray-600 mt-1">
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
             Administra los encargados y sus programas asignados
           </p>
         </div>
@@ -81,8 +81,8 @@ export const Staff = () => {
           <Card>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Encargados</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Total Encargados</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-2">
                   {stats.total_encargados}
                 </p>
               </div>
@@ -93,7 +93,7 @@ export const Staff = () => {
           <Card>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Sin Programas</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Sin Programas</p>
                 <p className="text-3xl font-bold text-yellow-600 mt-2">
                   {stats.encargados_sin_programas}
                 </p>
@@ -105,7 +105,7 @@ export const Staff = () => {
           <Card>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Programas Sin Encargado</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Programas Sin Encargado</p>
                 <p className="text-3xl font-bold text-red-600 mt-2">
                   {stats.programas_sin_encargado}
                 </p>
@@ -118,8 +118,8 @@ export const Staff = () => {
 
       {/* Tabla de Encargados */}
       <Card padding="none">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
             Lista de Encargados
           </h2>
         </div>

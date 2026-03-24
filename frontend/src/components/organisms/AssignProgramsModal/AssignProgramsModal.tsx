@@ -55,22 +55,22 @@ export const AssignProgramsModal = ({
       <div className="flex items-center justify-center min-h-screen px-4">
         <div className="fixed inset-0 bg-black opacity-50" onClick={onClose}></div>
 
-        <div className="relative bg-white rounded-lg max-w-2xl w-full p-6 shadow-xl">
+        <div className="relative bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full p-6 shadow-xl">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-gray-900">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               Asignar Programas
             </h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
             >
               <X size={24} />
             </button>
           </div>
 
           <div className="mb-4">
-            <p className="text-sm text-gray-600">
-              Encargado: <span className="font-semibold">{user.email}</span>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Encargado: <span className="font-semibold dark:text-gray-200">{user.email}</span>
             </p>
           </div>
 
@@ -78,7 +78,7 @@ export const AssignProgramsModal = ({
             {availablePrograms.map((program) => (
               <label
                 key={program.id}
-                className="flex items-start p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                className="flex items-start p-3 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
               >
                 <input
                   type="checkbox"
@@ -87,10 +87,10 @@ export const AssignProgramsModal = ({
                   className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                 />
                 <div className="ml-3">
-                  <p className="font-medium text-gray-900">
+                  <p className="font-medium text-gray-900 dark:text-gray-100">
                     {program.code} - {program.name}
                   </p>
-                  <p className="text-sm text-gray-500">{program.description}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{program.description}</p>
                 </div>
               </label>
             ))}

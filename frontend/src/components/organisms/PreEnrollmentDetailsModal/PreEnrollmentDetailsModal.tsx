@@ -124,27 +124,27 @@ export const PreEnrollmentDetailsModal = ({
       <div className="flex items-center justify-center min-h-screen px-4">
         <div className="fixed inset-0 bg-black opacity-50" onClick={onClose}></div>
 
-        <div className="relative bg-white rounded-lg max-w-4xl w-full shadow-xl max-h-[90vh] overflow-y-auto">
+        <div className="relative bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full shadow-xl max-h-[90vh] overflow-y-auto">
           {/* Header */}
-          <div className="sticky top-0 bg-white z-10 flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="sticky top-0 bg-white dark:bg-gray-800 z-10 flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 Pre-inscripción #{preEnrollment.id.slice(0, 8)}
               </h2>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 {preEnrollment.student.first_name} {preEnrollment.student.last_name}
               </p>
             </div>
             <div className="flex items-center space-x-4">
               {getStatusBadge(preEnrollment.status)}
-              <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+              <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                 <X size={24} />
               </button>
             </div>
           </div>
 
           {/* Tabs */}
-          <div className="border-b border-gray-200">
+          <div className="border-b border-gray-200 dark:border-gray-700">
             <nav className="flex space-x-8 px-6">
               {[
                 { id: 'info', label: 'Información', icon: User },
@@ -157,7 +157,7 @@ export const PreEnrollmentDetailsModal = ({
                   className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
                     activeTab === id
                       ? 'border-primary-500 text-primary-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300'
                   }`}
                 >
                   <Icon size={18} />
@@ -173,33 +173,33 @@ export const PreEnrollmentDetailsModal = ({
             {activeTab === 'info' && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                     Datos del Aspirante
                   </h3>
-                  <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
+                  <div className="grid grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
                     <div>
-                      <p className="text-sm text-gray-600">Nombre Completo</p>
-                      <p className="font-medium">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Nombre Completo</p>
+                      <p className="font-medium dark:text-gray-100">
                         {preEnrollment.student.first_name} {preEnrollment.student.last_name}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">CURP</p>
-                      <p className="font-medium">{preEnrollment.student.curp}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">CURP</p>
+                      <p className="font-medium dark:text-gray-100">{preEnrollment.student.curp}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Email</p>
-                      <p className="font-medium">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Email</p>
+                      <p className="font-medium dark:text-gray-100">
                         {preEnrollment.student.email || preEnrollment.student.user_email}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Teléfono</p>
-                      <p className="font-medium">{preEnrollment.student.phone}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Teléfono</p>
+                      <p className="font-medium dark:text-gray-100">{preEnrollment.student.phone}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Ubicación</p>
-                      <p className="font-medium">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Ubicación</p>
+                      <p className="font-medium dark:text-gray-100">
                         {preEnrollment.student.city}, {preEnrollment.student.state}
                       </p>
                     </div>
@@ -207,23 +207,23 @@ export const PreEnrollmentDetailsModal = ({
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                     Programa y Periodo
                   </h3>
-                  <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
+                  <div className="grid grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
                     <div>
-                      <p className="text-sm text-gray-600">Programa</p>
-                      <p className="font-medium">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Programa</p>
+                      <p className="font-medium dark:text-gray-100">
                         {preEnrollment.program.code} - {preEnrollment.program.name}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Periodo</p>
-                      <p className="font-medium">{preEnrollment.period.name}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Periodo</p>
+                      <p className="font-medium dark:text-gray-100">{preEnrollment.period.name}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Fecha de Solicitud</p>
-                      <p className="font-medium">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Fecha de Solicitud</p>
+                      <p className="font-medium dark:text-gray-100">
                         {preEnrollment.submitted_at
                           ? new Date(preEnrollment.submitted_at).toLocaleDateString('es-MX')
                           : 'No enviado'}
@@ -234,9 +234,9 @@ export const PreEnrollmentDetailsModal = ({
 
                 {preEnrollment.notes && (
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Notas</h3>
-                    <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
-                      <p className="text-sm text-gray-700">{preEnrollment.notes}</p>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Notas</h3>
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-4 rounded-lg">
+                      <p className="text-sm text-gray-700 dark:text-gray-300">{preEnrollment.notes}</p>
                     </div>
                   </div>
                 )}
@@ -246,7 +246,7 @@ export const PreEnrollmentDetailsModal = ({
             {/* Tab: Documentos */}
             {activeTab === 'documents' && (
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   Documentos ({preEnrollment.documents?.length || 0})
                 </h3>
 
@@ -255,21 +255,21 @@ export const PreEnrollmentDetailsModal = ({
                     {preEnrollment.documents.map((doc) => (
                       <div
                         key={doc.id}
-                        className="border border-gray-200 rounded-lg"
+                        className="border border-gray-200 dark:border-gray-700 rounded-lg"
                       >
                         {/* Fila principal del documento */}
-                        <div className="flex items-center justify-between p-4 hover:bg-gray-50">
+                        <div className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700">
                           <div className="flex items-center space-x-3">
                             <FileText className="text-gray-400" size={20} />
                             <div>
-                              <p className="font-medium text-gray-900">
+                              <p className="font-medium text-gray-900 dark:text-gray-100">
                                 {doc.document_type_display}
                               </p>
-                              <p className="text-sm text-gray-500">
+                              <p className="text-sm text-gray-500 dark:text-gray-400">
                                 Subido: {new Date(doc.uploaded_at).toLocaleDateString('es-MX')}
                               </p>
                               {doc.reviewer_notes && (
-                                <p className="text-sm text-amber-700 mt-1">
+                                <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
                                   <span className="font-medium">Observación:</span>{' '}
                                   {doc.reviewer_notes}
                                 </p>
@@ -301,14 +301,14 @@ export const PreEnrollmentDetailsModal = ({
 
                         {/* Formulario de revisión individual (solo staff, solo pending) */}
                         {canReviewDocuments && doc.status === 'pending' && (
-                          <div className="border-t border-gray-100 px-4 pb-4 pt-3 bg-gray-50 rounded-b-lg">
+                          <div className="border-t border-gray-100 dark:border-gray-600 px-4 pb-4 pt-3 bg-gray-50 dark:bg-gray-700 rounded-b-lg">
                             {reviewingDocId === doc.id ? (
                               <div className="space-y-3">
                                 <textarea
                                   placeholder="Observación para el aspirante (opcional)..."
                                   value={reviewNotes}
                                   onChange={(e) => setReviewNotes(e.target.value)}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-600 dark:text-gray-100"
                                   rows={2}
                                 />
                                 <div className="flex space-x-2">
@@ -373,22 +373,22 @@ export const PreEnrollmentDetailsModal = ({
                     ))}
                   </div>
                 ) : (
-                  <p className="text-center text-gray-500 py-8">
+                  <p className="text-center text-gray-500 dark:text-gray-400 py-8">
                     No hay documentos subidos
                   </p>
                 )}
 
                 {/* Acciones de revisión */}
                 {preEnrollment.status === 'under_review' && (
-                  <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h4 className="font-semibold text-gray-900 mb-3">
+                  <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
                       Revisar Documentos
                     </h4>
                     <textarea
                       placeholder="Notas sobre la revisión (opcional)..."
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-3"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg mb-3 dark:bg-gray-700 dark:text-gray-100"
                       rows={3}
                     />
                     <div className="flex space-x-3">
@@ -422,14 +422,14 @@ export const PreEnrollmentDetailsModal = ({
             {activeTab === 'exam' && (
               <div className="space-y-6">
                 {preEnrollment.exam_date ? (
-                  <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
-                    <h3 className="font-semibold text-green-900 mb-3">
+                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-lg">
+                    <h3 className="font-semibold text-green-900 dark:text-green-200 mb-3">
                       Examen Programado
                     </h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-sm text-green-700">Fecha</p>
-                        <p className="font-medium">
+                        <p className="text-sm text-green-700 dark:text-green-400">Fecha</p>
+                        <p className="font-medium dark:text-gray-200">
                           {new Date(preEnrollment.exam_date).toLocaleDateString('es-MX', {
                             year: 'numeric',
                             month: 'long',
@@ -440,15 +440,15 @@ export const PreEnrollmentDetailsModal = ({
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-green-700">Modalidad</p>
-                        <p className="font-medium capitalize">
+                        <p className="text-sm text-green-700 dark:text-green-400">Modalidad</p>
+                        <p className="font-medium capitalize dark:text-gray-200">
                           {preEnrollment.exam_mode?.replace('_', ' ')}
                         </p>
                       </div>
                       {preEnrollment.exam_location && (
                         <div className="col-span-2">
-                          <p className="text-sm text-green-700">Ubicación</p>
-                          <p className="font-medium">{preEnrollment.exam_location}</p>
+                          <p className="text-sm text-green-700 dark:text-green-400">Ubicación</p>
+                          <p className="font-medium dark:text-gray-200">{preEnrollment.exam_location}</p>
                         </div>
                       )}
                     </div>
@@ -457,8 +457,8 @@ export const PreEnrollmentDetailsModal = ({
 
                 {/* Programar examen */}
                 {preEnrollment.status === 'payment_validated' && !preEnrollment.exam_date && (
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h4 className="font-semibold text-gray-900 mb-4">
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">
                       Programar Examen de Admisión
                     </h4>
                     <div className="space-y-4">
@@ -471,11 +471,11 @@ export const PreEnrollmentDetailsModal = ({
                         }
                       />
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Modalidad
                         </label>
                         <select
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-gray-100"
                           value={examData.exam_mode}
                           onChange={(e) =>
                             setExamData({
@@ -510,8 +510,8 @@ export const PreEnrollmentDetailsModal = ({
 
                 {/* Ingresar calificación */}
                 {preEnrollment.status === 'exam_completed' && !preEnrollment.exam_score && (
-                  <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                    <h4 className="font-semibold text-gray-900 mb-4">
+                  <div className="p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
+                    <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">
                       Ingresar Calificación
                     </h4>
                     <div className="space-y-4">
@@ -527,7 +527,7 @@ export const PreEnrollmentDetailsModal = ({
                         placeholder="Observaciones (opcional)..."
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-gray-100"
                         rows={3}
                       />
                       <Button
@@ -548,8 +548,8 @@ export const PreEnrollmentDetailsModal = ({
 
                 {/* Mostrar calificación */}
                 {preEnrollment.exam_score !== null && (
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-gray-900 mb-2">
+                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                    <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
                       Calificación del Examen
                     </h4>
                     <p className="text-3xl font-bold text-primary-600">
@@ -563,7 +563,7 @@ export const PreEnrollmentDetailsModal = ({
           </div>
 
           {/* Footer */}
-          <div className="sticky bottom-0 bg-white border-t border-gray-200 p-6 flex justify-end">
+          <div className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-6 flex justify-end">
             <Button variant="outline" onClick={onClose}>
               Cerrar
             </Button>

@@ -86,7 +86,7 @@ export const LoginForm = () => {
         Iniciar sesión
       </Button>
 
-      <p className="text-center text-sm text-gray-600">
+      <p className="text-center text-sm text-gray-600 dark:text-gray-400">
         ¿No tienes cuenta?{' '}
         <Link to={ROUTES.REGISTER} className="text-primary-600 hover:underline font-medium">
           Regístrate aquí

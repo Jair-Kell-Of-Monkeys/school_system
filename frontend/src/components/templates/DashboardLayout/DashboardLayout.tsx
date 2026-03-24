@@ -131,10 +131,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           className="rounded-lg px-3 py-2.5"
           style={{ background: 'rgba(255,255,255,0.05)' }}
         >
-          <p className="text-white text-xs font-medium truncate">{user?.email}</p>
-          <p className="text-xs truncate mt-0.5" style={{ color: 'var(--sidebar-text)' }}>
-            {user?.role_display}
-          </p>
+
         </div>
 
         {/* Logout */}
