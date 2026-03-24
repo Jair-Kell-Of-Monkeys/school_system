@@ -328,6 +328,46 @@ export interface Enrollment {
   created_at: string;
 }
 
+export interface CredentialConvocatoria {
+  id: string;
+  title: string;
+  description: string | null;
+  requirements: string | null;
+  period: number;
+  period_name: string;
+  fecha_inicio: string;
+  fecha_fin: string;
+  status: string;
+  status_display: string;
+  created_by: string | null;
+  created_by_email: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CredentialRequest {
+  id: string;
+  convocatoria: string;
+  convocatoria_title: string;
+  enrollment: string;
+  status: string;
+  status_display: string;
+  student_name: string;
+  student_curp: string;
+  matricula: string;
+  program_name: string;
+  program_code: string;
+  period_name: string;
+  photo_url: string | null;
+  rejection_reason: string | null;
+  credential_id: string | null;
+  reviewed_by: string | null;
+  reviewed_by_email: string | null;
+  requested_at: string;
+  reviewed_at: string | null;
+  updated_at: string;
+}
+
 export interface EnrollmentDetail extends Enrollment {
   student: {
     id: string;

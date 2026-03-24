@@ -10,6 +10,8 @@ import { PreEnrollments } from '@/pages/PreEnrollments/PreEnrollments';
 import { Payments } from '@/pages/Payments/Payments';
 import { Enrollments } from '@/pages/Enrollments/Enrollments';
 import { ExamSessions } from '@/pages/ExamSessions/ExamSessions';
+import { Credentials } from '@/pages/Credentials/Credentials';
+import { CredentialRequests } from '@/pages/CredentialRequests/CredentialRequests';
 import { DashboardLayout } from '@/components/templates/DashboardLayout/DashboardLayout';
 import { MyApplication } from '@/pages/MyApplication/MyApplication';
 import { ProtectedRoute } from '@/components/organisms/ProtectedRoute/ProtectedRoute';
@@ -150,6 +152,32 @@ function App() {
               <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.FINANZAS]}>
                 <DashboardLayout>
                   <Payments />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Credencialización — Jefe: crear y publicar convocatorias */}
+          <Route
+            path="/credentials"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.JEFE_SERVICIOS]}>
+                <DashboardLayout>
+                  <Credentials />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Solicitudes de Credencial — Staff: aprobar / rechazar */}
+          <Route
+            path="/credential-requests"
+            element={
+              <ProtectedRoute
+                allowedRoles={[ROLES.ADMIN, ROLES.JEFE_SERVICIOS, ROLES.SERVICIOS_ESCOLARES]}
+              >
+                <DashboardLayout>
+                  <CredentialRequests />
                 </DashboardLayout>
               </ProtectedRoute>
             }

@@ -30,7 +30,7 @@ urlpatterns = [
     path('api/enrollments/', include('apps.enrollments.urls')),
     path('api/exams/', include('apps.exams.urls')),
     #path('api/payments/', include('apps.payments.urls')),
-    #path('api/credentials/', include('apps.credentials.urls')),
+    path('api/credentials/', include('apps.credentials.urls')),
 ]
 
 # Configuración de MEDIA en desarrollo

@@ -8,6 +8,7 @@ import { DocumentUploader } from '@/components/organisms/DocumentUploader/Docume
 import { aspirantService } from '@/services/aspirant/aspirantService';
 import { paymentsService } from '@/services/payments/paymentsService';
 import { enrollmentsService } from '@/services/enrollments/enrollmentsService';
+import { credentialsService } from '@/services/credentials/credentialsService';
 import type { TimelineStep } from '@/components/molecules/StatusTimeline/StatusTimeline';
 import type { EnrollmentDetail } from '@/types';
 import {
@@ -22,6 +23,8 @@ import {
   XCircle,
   BookOpen,
   GraduationCap,
+  Award,
+  Clock,
 } from 'lucide-react';
 
 // Documentos requeridos para inscripción formal (exactamente 2)
@@ -47,6 +50,7 @@ export const MyApplication = () => {
   const [isDownloadingEnrollReceipt, setIsDownloadingEnrollReceipt] = useState(false);
   const [isDownloadingComprobante, setIsDownloadingComprobante] = useState(false);
   const [enrollDocFiles, setEnrollDocFiles] = useState<Record<string, File | null>>({});
+  const [isDownloadingCredential, setIsDownloadingCredential] = useState(false);
 
   // ── Queries ──────────────────────────────────────────────────────────────
 
@@ -88,6 +92,21 @@ export const MyApplication = () => {
     enabled: !!enrollment && ENROLLMENT_PAYMENT_STATUSES.includes(enrollment.status),
   });
 
+  // Credencial — solo cuando la inscripción está completada (enrolled)
+  const { data: myCredentialRequests = [] } = useQuery({
+    queryKey: ['my-credential-requests'],
+    queryFn: credentialsService.getMyRequests,
+    enabled: !!enrollment && enrollment.status === 'enrolled',
+  });
+  const myCredentialRequest = myCredentialRequests[0] ?? null;
+
+  const { data: activeConvocatorias = [] } = useQuery({
+    queryKey: ['active-convocatorias'],
+    queryFn: () => credentialsService.getConvocatorias({ status: 'activa' }),
+    enabled: !!enrollment && enrollment.status === 'enrolled' && !myCredentialRequest,
+  });
+  const activeConvocatoria = activeConvocatorias[0] ?? null;
+
   // ── Mutations ─────────────────────────────────────────────────────────────
 
   const createMutation = useMutation({
@@ -110,6 +129,16 @@ export const MyApplication = () => {
       alert(
         'Solicitud enviada correctamente. El equipo de admisiones revisará tus documentos.'
       );
+    },
+  });
+
+  const requestCredentialMutation = useMutation({
+    mutationFn: (convocatoriaId: string) => credentialsService.createRequest(convocatoriaId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-credential-requests'] });
+    },
+    onError: (err: any) => {
+      alert(err?.response?.data?.error || 'Error al solicitar la credencial.');
     },
   });
 
@@ -281,6 +310,17 @@ export const MyApplication = () => {
       alert('Error al descargar el comprobante. Intenta de nuevo.');
     } finally {
       setIsDownloadingComprobante(false);
+    }
+  };
+
+  const handleDownloadCredential = async (credentialId: string, matricula: string) => {
+    setIsDownloadingCredential(true);
+    try {
+      await credentialsService.downloadCredential(credentialId, matricula);
+    } catch {
+      alert('Error al descargar la credencial. Intenta de nuevo.');
+    } finally {
+      setIsDownloadingCredential(false);
     }
   };
 
@@ -846,6 +886,155 @@ export const MyApplication = () => {
                 <p className="text-xs text-gray-400 mt-4">
                   Conserva tu comprobante. Para activar tu correo institucional, acude a Servicios Escolares con identificación oficial.
                 </p>
+              </div>
+
+              {/* ── Sección Credencial Estudiantil ─────────────────────── */}
+              <div className="bg-blue-50 border-t border-blue-100 px-8 py-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Award className="text-blue-600" size={22} />
+                  <h3 className="text-base font-semibold text-blue-900">
+                    Credencial Estudiantil
+                  </h3>
+                </div>
+
+                {/* Sin convocatoria activa y sin solicitud */}
+                {!myCredentialRequest && !activeConvocatoria && (
+                  <div className="flex items-start gap-3 p-3 bg-white border border-blue-200 rounded-lg">
+                    <Clock className="text-blue-400 flex-shrink-0 mt-0.5" size={16} />
+                    <p className="text-sm text-blue-700">
+                      No hay una convocatoria de credencialización activa en este momento.
+                      Te notificaremos cuando se abra el proceso.
+                    </p>
+                  </div>
+                )}
+
+                {/* Hay convocatoria activa y el alumno no ha solicitado */}
+                {!myCredentialRequest && activeConvocatoria && (
+                  <div className="space-y-4">
+                    <div className="bg-white border border-blue-200 rounded-lg p-4">
+                      <p className="font-medium text-gray-900 mb-1">
+                        {activeConvocatoria.title}
+                      </p>
+                      {activeConvocatoria.description && (
+                        <p className="text-sm text-gray-600 mb-2">
+                          {activeConvocatoria.description}
+                        </p>
+                      )}
+                      {activeConvocatoria.requirements && (
+                        <div className="text-xs text-gray-500 bg-yellow-50 border border-yellow-200 rounded p-2">
+                          <span className="font-medium">Requisitos de fotografía:</span>{' '}
+                          {activeConvocatoria.requirements}
+                        </div>
+                      )}
+                      <p className="text-xs text-gray-400 mt-2">
+                        Cierre: {activeConvocatoria.fecha_fin}
+                      </p>
+                    </div>
+
+                    <div className="bg-white border border-blue-200 rounded-lg p-4 space-y-1">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                        Verifica tus datos antes de solicitar
+                      </p>
+                      <p className="text-sm text-gray-700">
+                        <span className="font-medium">Nombre:</span>{' '}
+                        {enrollment.student?.first_name} {enrollment.student?.last_name}
+                      </p>
+                      <p className="text-sm text-gray-700">
+                        <span className="font-medium">Matrícula:</span> {enrollment.matricula}
+                      </p>
+                      <p className="text-sm text-gray-700">
+                        <span className="font-medium">Programa:</span>{' '}
+                        {enrollment.program?.name}
+                      </p>
+                      <p className="text-sm text-gray-700">
+                        <span className="font-medium">Periodo:</span>{' '}
+                        {enrollment.period?.name}
+                      </p>
+                    </div>
+
+                    <Button
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            '¿Confirmas que tus datos son correctos y deseas solicitar tu credencial?'
+                          )
+                        ) {
+                          requestCredentialMutation.mutate(activeConvocatoria.id);
+                        }
+                      }}
+                      isLoading={requestCredentialMutation.isPending}
+                    >
+                      <Award size={18} className="mr-2" />
+                      Solicitar Credencial
+                    </Button>
+                  </div>
+                )}
+
+                {/* Solicitud enviada - pendiente */}
+                {myCredentialRequest?.status === 'pendiente' && (
+                  <div className="flex items-start gap-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <Clock className="text-yellow-600 flex-shrink-0 mt-0.5" size={16} />
+                    <div>
+                      <p className="text-sm font-medium text-yellow-800">
+                        Solicitud en revisión
+                      </p>
+                      <p className="text-sm text-yellow-700 mt-0.5">
+                        Tu solicitud de credencial está siendo revisada. Te notificaremos
+                        por correo cuando sea procesada.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Rechazada */}
+                {myCredentialRequest?.status === 'rechazada' && (
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={16} />
+                      <div>
+                        <p className="text-sm font-medium text-red-800">Solicitud rechazada</p>
+                        {myCredentialRequest.rejection_reason && (
+                          <p className="text-sm text-red-700 mt-0.5">
+                            {myCredentialRequest.rejection_reason}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Generada - disponible para descargar */}
+                {myCredentialRequest?.status === 'generada' && (
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <CheckCircle className="text-green-600 flex-shrink-0 mt-0.5" size={18} />
+                      <div>
+                        <p className="font-medium text-green-900">
+                          ¡Tu credencial está lista!
+                        </p>
+                        <p className="text-sm text-green-700 mt-0.5">
+                          Descarga tu credencial estudiantil en formato PDF.
+                        </p>
+                      </div>
+                    </div>
+                    {myCredentialRequest.credential_id && (
+                      <Button
+                        variant="success"
+                        onClick={() =>
+                          handleDownloadCredential(
+                            myCredentialRequest.credential_id!,
+                            myCredentialRequest.matricula
+                          )
+                        }
+                        isLoading={isDownloadingCredential}
+                        disabled={isDownloadingCredential}
+                      >
+                        <Download size={18} className="mr-2" />
+                        Descargar Credencial
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}

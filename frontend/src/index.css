@@ -2,15 +2,299 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {
-    @apply bg-gray-50 text-gray-900;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  }
+/* ─── Design System — CSS Variables ──────────────────────────────────────── */
+
+:root {
+  /* Typography */
+  --font-display: 'Plus Jakarta Sans', sans-serif;
+  --font-body:    'DM Sans', sans-serif;
+
+  /* Backgrounds */
+  --bg-base:      #F0F2FF;
+  --bg-surface:   #FFFFFF;
+  --bg-surface-2: #F7F8FE;
+  --bg-surface-3: #EEF0FA;
+
+  /* Borders */
+  --border:       #E2E6F4;
+  --border-strong:#C7CEEA;
+
+  /* Text */
+  --text-primary:   #111827;
+  --text-secondary: #4B5563;
+  --text-muted:     #9CA3AF;
+
+  /* Sidebar */
+  --sidebar-width:  256px;
+  --sidebar-bg:     #0F1C4D;
+  --sidebar-bg-2:   #0A1234;
+  --sidebar-border: rgba(255,255,255,.07);
+  --sidebar-text:   #A5B4D4;
+  --sidebar-text-hover: #D4DCEF;
+  --sidebar-text-active: #FFFFFF;
+  --sidebar-item-hover:  rgba(255,255,255,.06);
+  --sidebar-item-active: rgba(99,102,241,.22);
+  --sidebar-indicator:   #6366F1;
+
+  /* Header */
+  --header-bg:     rgba(255,255,255,.92);
+  --header-border: #E2E6F4;
+  --header-height: 64px;
+
+  /* Shadows */
+  --shadow-xs:  0 1px 2px rgba(10,22,60,.05);
+  --shadow-sm:  0 1px 3px rgba(10,22,60,.06), 0 2px 8px rgba(10,22,60,.05);
+  --shadow-md:  0 1px 3px rgba(10,22,60,.06), 0 4px 16px rgba(10,22,60,.07);
+  --shadow-lg:  0 4px 24px rgba(10,22,60,.10), 0 1px 4px rgba(10,22,60,.06);
+
+  /* Semantic status colors */
+  --color-success:     #059669;
+  --color-success-bg:  #ECFDF5;
+  --color-success-border: #A7F3D0;
+  --color-warning:     #D97706;
+  --color-warning-bg:  #FFFBEB;
+  --color-warning-border: #FDE68A;
+  --color-danger:      #DC2626;
+  --color-danger-bg:   #FEF2F2;
+  --color-danger-border: #FECACA;
+  --color-info:        #2563EB;
+  --color-info-bg:     #EFF6FF;
+  --color-info-border: #BFDBFE;
+
+  /* Radius */
+  --radius-sm:  6px;
+  --radius-md:  10px;
+  --radius-lg:  14px;
+  --radius-xl:  18px;
 }
 
+.dark {
+  /* Backgrounds */
+  --bg-base:      #080D20;
+  --bg-surface:   #0F1528;
+  --bg-surface-2: #141C30;
+  --bg-surface-3: #1A2238;
+
+  /* Borders */
+  --border:       #1E2A42;
+  --border-strong:#273650;
+
+  /* Text */
+  --text-primary:   #E8EEF8;
+  --text-secondary: #8A9EC0;
+  --text-muted:     #4A5A78;
+
+  /* Sidebar (darker in dark mode) */
+  --sidebar-bg:   #060B18;
+  --sidebar-bg-2: #040810;
+
+  /* Header */
+  --header-bg:     rgba(15,21,40,.92);
+  --header-border: #1E2A42;
+
+  /* Shadows (stronger in dark for depth) */
+  --shadow-sm:  0 1px 3px rgba(0,0,0,.3), 0 2px 8px rgba(0,0,0,.2);
+  --shadow-md:  0 1px 3px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+  --shadow-lg:  0 4px 24px rgba(0,0,0,.4), 0 1px 4px rgba(0,0,0,.2);
+
+  /* Semantic — slightly adjusted for dark */
+  --color-success-bg:  rgba(5,150,105,.12);
+  --color-success-border: rgba(167,243,208,.15);
+  --color-warning-bg:  rgba(217,119,6,.12);
+  --color-warning-border: rgba(253,230,138,.15);
+  --color-danger-bg:   rgba(220,38,38,.12);
+  --color-danger-border: rgba(254,202,202,.15);
+  --color-info-bg:     rgba(37,99,235,.12);
+  --color-info-border: rgba(191,219,254,.15);
+}
+
+/* ─── Base Layer ──────────────────────────────────────────────────────────── */
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    line-height: 1.25;
+    color: var(--text-primary);
+  }
+
+  /* Smooth scrollbar in Webkit */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+}
+
+/* ─── Component Layer ─────────────────────────────────────────────────────── */
+
 @layer components {
+  /* Layout container */
   .container-custom {
     @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
   }
+
+  /* Page fade-up animation helper */
+  .page-enter {
+    animation: fadeUp 0.4s ease-out both;
+  }
+
+  /* ── Sidebar item ───────────────────────────────────────────────────── */
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--sidebar-text);
+    transition: background-color .15s, color .15s;
+    text-decoration: none;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+  }
+  .nav-item:hover {
+    background-color: var(--sidebar-item-hover);
+    color: var(--sidebar-text-hover);
+  }
+  .nav-item.active {
+    background-color: var(--sidebar-item-active);
+    color: var(--sidebar-text-active);
+    border-left: 3px solid var(--sidebar-indicator);
+    padding-left: 9px; /* compensate for border */
+  }
+  .nav-item.active svg {
+    color: var(--sidebar-indicator);
+  }
+
+  /* ── Surface card ───────────────────────────────────────────────────── */
+  .surface {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+  }
+
+  /* ── Status badge colors using CSS vars ─────────────────────────────── */
+  .badge-success {
+    background-color: var(--color-success-bg);
+    color: var(--color-success);
+    border: 1px solid var(--color-success-border);
+  }
+  .badge-warning {
+    background-color: var(--color-warning-bg);
+    color: var(--color-warning);
+    border: 1px solid var(--color-warning-border);
+  }
+  .badge-danger {
+    background-color: var(--color-danger-bg);
+    color: var(--color-danger);
+    border: 1px solid var(--color-danger-border);
+  }
+  .badge-info {
+    background-color: var(--color-info-bg);
+    color: var(--color-info);
+    border: 1px solid var(--color-info-border);
+  }
+  .badge-default {
+    background-color: var(--bg-surface-3);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+  }
+
+  /* ── Alert / notice boxes ───────────────────────────────────────────── */
+  .alert-success {
+    background-color: var(--color-success-bg);
+    border: 1px solid var(--color-success-border);
+    color: var(--color-success);
+  }
+  .alert-warning {
+    background-color: var(--color-warning-bg);
+    border: 1px solid var(--color-warning-border);
+    color: var(--color-warning);
+  }
+  .alert-danger {
+    background-color: var(--color-danger-bg);
+    border: 1px solid var(--color-danger-border);
+    color: var(--color-danger);
+  }
+  .alert-info {
+    background-color: var(--color-info-bg);
+    border: 1px solid var(--color-info-border);
+    color: var(--color-info);
+  }
+}
+
+/* ─── Utility Layer ───────────────────────────────────────────────────────── */
+
+@layer utilities {
+  /* Text using CSS variables */
+  .text-primary-var   { color: var(--text-primary); }
+  .text-secondary-var { color: var(--text-secondary); }
+  .text-muted-var     { color: var(--text-muted); }
+
+  /* Background surfaces */
+  .bg-surface   { background-color: var(--bg-surface); }
+  .bg-surface-2 { background-color: var(--bg-surface-2); }
+  .bg-surface-3 { background-color: var(--bg-surface-3); }
+  .bg-base      { background-color: var(--bg-base); }
+
+  /* Border using CSS var */
+  .border-theme       { border-color: var(--border); }
+  .border-theme-strong{ border-color: var(--border-strong); }
+
+  /* Shadow helpers */
+  .shadow-card       { box-shadow: var(--shadow-md); }
+  .shadow-card-hover { box-shadow: var(--shadow-lg); }
+}
+
+/* ─── Stagger animation helper for lists ─────────────────────────────────── */
+
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.10s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.20s; }
+
+/* ─── Select element — global dark mode fix ──────────────────────────────── */
+
+.dark select,
+.dark input[type="text"],
+.dark input[type="email"],
+.dark input[type="password"],
+.dark input[type="number"],
+.dark input[type="date"],
+.dark textarea {
+  background-color: var(--bg-surface-2);
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+
+.dark select option {
+  background-color: var(--bg-surface-2);
+  color: var(--text-primary);
 }
