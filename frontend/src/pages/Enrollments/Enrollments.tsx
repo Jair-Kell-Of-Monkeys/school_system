@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card } from '@/components/atoms/Card/Card';
+import { Modal } from '@/components/atoms/Modal/Modal';
 import { Button } from '@/components/atoms/Button/Button';
 import { Badge } from '@/components/atoms/Badge/Badge';
 import { Input } from '@/components/atoms/Input/Input';
@@ -41,10 +42,6 @@ const inputStyle = {
   color: 'var(--text-primary)',
 } as const;
 
-const modalStyle = {
-  background: 'var(--bg-surface)',
-  borderColor: 'var(--border)',
-} as const;
 
 // ── Enrollment Detail Modal ───────────────────────────────────────────────
 
@@ -105,18 +102,7 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
   const pendingReview = uploadedDocs.filter((d) => d.status === 'pending').length;
 
   return (
-    <>
-      <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm" />
-      <div
-        className="fixed inset-0 z-[110] overflow-y-auto"
-        onClick={onClose}
-      >
-        <div className="flex min-h-full items-start justify-center p-6 sm:p-10">
-        <div
-          className="rounded-2xl shadow-2xl w-full max-w-3xl"
-          style={{ ...modalStyle, border: '1px solid var(--border)' }}
-          onClick={(e) => e.stopPropagation()}
-        >
+    <Modal isOpen onClose={onClose} maxWidth="3xl" align="top">
         {/* Header */}
         <div
           className="flex items-center justify-between p-6 border-b"
@@ -404,10 +390,7 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
             </div>
           )}
         </div>
-        </div>
-        </div>
-      </div>
-    </>
+    </Modal>
   );
 };
 

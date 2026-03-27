@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card } from '@/components/atoms/Card/Card';
+import { Modal } from '@/components/atoms/Modal/Modal';
 import { Button } from '@/components/atoms/Button/Button';
 import { Badge } from '@/components/atoms/Badge/Badge';
 import { Input } from '@/components/atoms/Input/Input';
@@ -34,7 +35,6 @@ const inputSty = {
   color: 'var(--text-primary)',
 } as const;
 
-const modalSty = { background: 'var(--bg-surface)' } as const;
 
 // ── Venue row ─────────────────────────────────────────────────────────────
 
@@ -150,18 +150,7 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
   const labelSty = { color: 'var(--text-secondary)' };
 
   return (
-    <>
-      <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm" />
-      <div
-        className="fixed inset-0 z-[110] overflow-y-auto"
-        onClick={onClose}
-      >
-        <div className="flex min-h-full items-start justify-center p-6 sm:p-10">
-        <div
-          className="rounded-2xl shadow-2xl w-full max-w-3xl"
-          style={{ ...modalSty, border: '1px solid var(--border)' }}
-          onClick={(e) => e.stopPropagation()}
-        >
+    <Modal isOpen onClose={onClose} maxWidth="3xl" align="top">
 
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: 'var(--border)' }}>
@@ -423,10 +412,7 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
             Crear Sesión
           </Button>
         </div>
-        </div>
-        </div>
-      </div>
-    </>
+    </Modal>
   );
 };
 
@@ -499,18 +485,7 @@ const GradingPanel = ({ session, onClose }: GradingPanelProps) => {
   }, {});
 
   return (
-    <>
-      <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm" />
-      <div
-        className="fixed inset-0 z-[110] overflow-y-auto"
-        onClick={onClose}
-      >
-        <div className="flex min-h-full items-start justify-center p-6 sm:p-10">
-        <div
-          className="rounded-2xl shadow-2xl w-full max-w-5xl"
-          style={{ ...modalSty, border: '1px solid var(--border)' }}
-          onClick={(e) => e.stopPropagation()}
-        >
+    <Modal isOpen onClose={onClose} maxWidth="5xl" align="top">
 
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: 'var(--border)' }}>
@@ -746,10 +721,7 @@ const GradingPanel = ({ session, onClose }: GradingPanelProps) => {
             ))
           )}
         </div>
-        </div>
-        </div>
-      </div>
-    </>
+    </Modal>
   );
 };
 

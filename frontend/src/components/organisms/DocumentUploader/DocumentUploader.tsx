@@ -132,7 +132,7 @@ export const DocumentUploader = ({ application }: DocumentUploaderProps) => {
                   <div className="flex items-center gap-2 shrink-0">
                     {doc.file_url && (
                       <button
-                        onClick={() => window.open(doc.file_url, '_blank')}
+                        onClick={() => window.open(doc.file_url ?? undefined, '_blank')}
                         className="p-1.5 rounded-lg transition-colors"
                         style={{ color: 'var(--text-muted)' }}
                         title="Ver documento"

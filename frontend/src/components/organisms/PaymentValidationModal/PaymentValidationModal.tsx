@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Modal } from '@/components/atoms/Modal/Modal';
 import { Button } from '@/components/atoms/Button/Button';
 import { Badge } from '@/components/atoms/Badge/Badge';
 import type { PaymentDetail } from '@/types';
@@ -58,7 +59,7 @@ export const PaymentValidationModal = ({
     },
   });
 
-  if (!isOpen || !payment) return null;
+  if (!payment) return null;
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: 'success' | 'warning' | 'danger'; label: string }> = {
@@ -94,18 +95,7 @@ export const PaymentValidationModal = ({
   };
 
   return (
-    <>
-      <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm" />
-      <div
-        className="fixed inset-0 z-[110] overflow-y-auto"
-        onClick={onClose}
-      >
-        <div className="flex min-h-full items-start justify-center p-6 sm:p-10">
-        <div
-          className="relative w-full max-w-3xl rounded-2xl shadow-2xl"
-          style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
-          onClick={(e) => e.stopPropagation()}
-        >
+    <Modal isOpen={isOpen} onClose={onClose} maxWidth="3xl" align="top">
           {/* Header */}
           <div
             className="flex items-center justify-between p-6 border-b"
@@ -342,9 +332,6 @@ export const PaymentValidationModal = ({
               Cerrar
             </Button>
           </div>
-        </div>
-        </div>
-      </div>
-    </>
+    </Modal>
   );
 };

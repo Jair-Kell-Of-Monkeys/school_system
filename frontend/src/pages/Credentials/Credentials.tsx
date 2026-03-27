@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card } from '@/components/atoms/Card/Card';
+import { Modal } from '@/components/atoms/Modal/Modal';
 import { Button } from '@/components/atoms/Button/Button';
 import { Badge } from '@/components/atoms/Badge/Badge';
 import { credentialsService } from '@/services/credentials/credentialsService';
 import { aspirantService } from '@/services/aspirant/aspirantService';
-import { PlusCircle, Send, Calendar, FileText } from 'lucide-react';
+import { PlusCircle, Send, Calendar, FileText, X } from 'lucide-react';
 
 const statusBadgeVariant = (status: string): 'success' | 'danger' | 'warning' => {
   if (status === 'activa') return 'success';
@@ -95,10 +96,23 @@ export const Credentials = () => {
         </Button>
       </div>
 
-      {/* Formulario de creación */}
-      {showForm && (
-        <Card className="border-2 border-primary-200">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Nueva Convocatoria</h2>
+      {/* Modal de creación */}
+      <Modal
+        isOpen={showForm}
+        onClose={() => { setShowForm(false); setFormError(''); }}
+        maxWidth="2xl"
+      >
+        <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: 'var(--border)' }}>
+          <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Nueva Convocatoria</h2>
+          <button
+            onClick={() => { setShowForm(false); setFormError(''); }}
+            className="w-8 h-8 rounded-lg flex items-center justify-center"
+            style={{ color: 'var(--text-muted)', background: 'var(--bg-surface-2)' }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <div className="p-6">
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -192,8 +206,8 @@ export const Credentials = () => {
               </Button>
             </div>
           </div>
-        </Card>
-      )}
+        </div>
+      </Modal>
 
       {/* Lista de convocatorias */}
       {convocatorias.length === 0 ? (

@@ -1,3 +1,4 @@
+import { Modal } from '@/components/atoms/Modal/Modal';
 import { Button } from '@/components/atoms/Button/Button';
 import { Badge } from '@/components/atoms/Badge/Badge';
 import type { Student } from '@/types';
@@ -10,7 +11,7 @@ interface StudentDetailsModalProps {
 }
 
 export const StudentDetailsModal = ({ isOpen, onClose, student }: StudentDetailsModalProps) => {
-  if (!isOpen || !student) return null;
+  if (!student) return null;
 
   const getPhotoStatusBadge = (status: string) => {
     const variants = {
@@ -34,18 +35,7 @@ export const StudentDetailsModal = ({ isOpen, onClose, student }: StudentDetails
   };
 
   return (
-    <>
-      <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm" />
-      <div
-        className="fixed inset-0 z-[110] overflow-y-auto"
-        onClick={onClose}
-      >
-        <div className="flex min-h-full items-start justify-center p-6 sm:p-10">
-        <div
-          className="relative w-full max-w-2xl rounded-2xl shadow-2xl"
-          style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
-          onClick={(e) => e.stopPropagation()}
-        >
+    <Modal isOpen={isOpen} onClose={onClose} maxWidth="2xl">
           {/* Header */}
           <div
             className="flex items-center justify-between p-6 border-b"
@@ -184,9 +174,6 @@ export const StudentDetailsModal = ({ isOpen, onClose, student }: StudentDetails
               Cerrar
             </Button>
           </div>
-        </div>
-        </div>
-      </div>
-    </>
+    </Modal>
   );
 };
