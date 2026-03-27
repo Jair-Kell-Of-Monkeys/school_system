@@ -1,5 +1,4 @@
 import { Table } from '@/components/molecules/Table/Table';
-import { Badge } from '@/components/atoms/Badge/Badge';
 import { Button } from '@/components/atoms/Button/Button';
 import type { Student } from '@/types';
 import { Eye } from 'lucide-react';
@@ -11,16 +10,6 @@ interface StudentsTableProps {
 }
 
 export const StudentsTable = ({ students, isLoading, onViewDetails }: StudentsTableProps) => {
-  const getPhotoStatusBadge = (status: string) => {
-    const variants = {
-      pending: { variant: 'warning' as const, label: 'Pendiente' },
-      approved: { variant: 'success' as const, label: 'Aprobada' },
-      rejected: { variant: 'danger' as const, label: 'Rechazada' },
-    };
-    const config = variants[status as keyof typeof variants] || variants.pending;
-    return <Badge variant={config.variant}>{config.label}</Badge>;
-  };
-
   const getGenderLabel = (gender: string) => {
     const labels: Record<string, string> = {
       masculino: 'M',
@@ -56,10 +45,6 @@ export const StudentsTable = ({ students, isLoading, onViewDetails }: StudentsTa
         {
           header: 'Género',
           accessor: (row) => getGenderLabel(row.gender),
-        },
-        {
-          header: 'Foto',
-          accessor: (row) => getPhotoStatusBadge(row.photo_status),
         },
         {
           header: 'Registro',

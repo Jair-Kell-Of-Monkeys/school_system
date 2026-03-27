@@ -198,7 +198,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           </button>
         </header>
 
-        <main className="flex-1 p-6 animate-fade-up">
+        <main className="flex-1 p-6 animate-fade-in">
           {children}
         </main>
       </div>

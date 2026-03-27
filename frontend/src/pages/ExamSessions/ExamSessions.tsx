@@ -10,27 +10,33 @@ import { useAuthStore } from '@/store/authStore';
 import { ROLES } from '@/config/constants';
 import type { ExamSession, ExamSessionDetail, ExamAspirant } from '@/types';
 import {
-  ClipboardList,
-  Plus,
-  X,
-  Trash2,
-  ChevronLeft,
-  ChevronRight,
-  Send,
-  Eye,
-  CheckCircle,
-  XCircle,
-  Loader2,
-  Users,
+  ClipboardList, Plus, X, Trash2, ChevronLeft, ChevronRight,
+  Send, Eye, CheckCircle, XCircle, Loader2, Users,
+  Calendar, MapPin, BookOpen,
 } from 'lucide-react';
 
+// ── Status maps ───────────────────────────────────────────────────────────
+
 const STATUS_VARIANT: Record<string, 'warning' | 'info' | 'success' | 'default'> = {
-  draft: 'warning',
+  draft:     'warning',
   published: 'info',
   completed: 'success',
 };
 
-// ── Venue row in create form ───────────────────────────────────────────────
+// ── Shared input style ────────────────────────────────────────────────────
+
+const inputCls =
+  'w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500';
+
+const inputSty = {
+  background: 'var(--bg-surface-2)',
+  border: '1.5px solid var(--border)',
+  color: 'var(--text-primary)',
+} as const;
+
+const modalSty = { background: 'var(--bg-surface)' } as const;
+
+// ── Venue row ─────────────────────────────────────────────────────────────
 
 interface VenueRow {
   program: string;
@@ -38,6 +44,17 @@ interface VenueRow {
   room: string;
   capacity: string;
 }
+
+// ── Section title ─────────────────────────────────────────────────────────
+
+const SectionTitle = ({ label }: { label: string }) => (
+  <div className="flex items-center gap-3 mb-3">
+    <p className="text-xs font-bold uppercase tracking-widest shrink-0" style={{ color: 'var(--text-muted)' }}>
+      {label}
+    </p>
+    <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
+  </div>
+);
 
 // ── Create Session Modal ───────────────────────────────────────────────────
 
@@ -71,7 +88,6 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
     queryFn: aspirantService.getActivePeriods,
   });
 
-  // Live aspirant counts for selected period
   const { data: aspirantCounts = [] } = useQuery({
     queryKey: ['aspirant-counts', formData.period],
     queryFn: () => examsService.getAspirantCounts(parseInt(formData.period)),
@@ -88,28 +104,21 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
       const msg =
         (err as { response?: { data?: { non_field_errors?: string[]; venues?: string[] } } })
           ?.response?.data?.non_field_errors?.[0] ??
-        (err as { response?: { data?: { venues?: string[] } } })?.response?.data
-          ?.venues?.[0] ??
+        (err as { response?: { data?: { venues?: string[] } } })?.response?.data?.venues?.[0] ??
         'Error al crear la sesión. Verifica los datos.';
       alert(msg);
     },
   });
 
-  const handleAddVenue = () => {
+  const handleAddVenue = () =>
     setVenues((prev) => [...prev, { program: '', building: '', room: '', capacity: '' }]);
-  };
 
-  const handleRemoveVenue = (idx: number) => {
+  const handleRemoveVenue = (idx: number) =>
     setVenues((prev) => prev.filter((_, i) => i !== idx));
-  };
 
-  const handleVenueChange = (idx: number, field: keyof VenueRow, value: string) => {
-    setVenues((prev) =>
-      prev.map((v, i) => (i === idx ? { ...v, [field]: value } : v))
-    );
-  };
+  const handleVenueChange = (idx: number, field: keyof VenueRow, value: string) =>
+    setVenues((prev) => prev.map((v, i) => (i === idx ? { ...v, [field]: value } : v)));
 
-  // Build capacity totals per program from venues
   const capacityByProgram: Record<string, number> = {};
   for (const v of venues) {
     if (v.program && v.capacity) {
@@ -119,14 +128,8 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
   }
 
   const handleSubmit = () => {
-    const incomplete = venues.some(
-      (v) => !v.program || !v.building || !v.room || !v.capacity
-    );
-    if (incomplete) {
-      alert('Completa todos los campos de cada salón.');
-      return;
-    }
-
+    const incomplete = venues.some((v) => !v.program || !v.building || !v.room || !v.capacity);
+    if (incomplete) { alert('Completa todos los campos de cada salón.'); return; }
     createMutation.mutate({
       name: formData.name,
       period: parseInt(formData.period),
@@ -144,186 +147,203 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
     });
   };
 
+  const labelSty = { color: 'var(--text-secondary)' };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center overflow-y-auto py-8 px-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-3xl">
-        <div className="flex items-center justify-between p-6 border-b dark:border-gray-700">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Nueva Sesión de Examen</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-            <X size={20} />
+    <>
+      <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm" />
+      <div
+        className="fixed inset-0 z-[110] overflow-y-auto"
+        onClick={onClose}
+      >
+        <div className="flex min-h-full items-start justify-center p-6 sm:p-10">
+        <div
+          className="rounded-2xl shadow-2xl w-full max-w-3xl"
+          style={{ ...modalSty, border: '1px solid var(--border)' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: 'var(--border)' }}>
+          <div>
+            <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
+              Nueva Sesión de Examen
+            </h2>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+              Configura la sesión y sus salones de examen
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-lg flex items-center justify-center"
+            style={{ color: 'var(--text-muted)', background: 'var(--bg-surface-2)' }}
+          >
+            <X size={16} />
           </button>
         </div>
 
-        <div className="p-6 space-y-5">
-          {/* Session fields */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Nombre de la sesión <span className="text-red-500">*</span>
-              </label>
-              <Input
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Ej: Examen de Admisión 2026-1"
-              />
-            </div>
+        <div className="p-6 space-y-6">
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Periodo <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.period}
-                onChange={(e) => setFormData({ ...formData, period: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
-              >
-                <option value="">Selecciona un periodo...</option>
-                {periods.map((p: { id: number; name: string }) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* General fields */}
+          <section>
+            <SectionTitle label="Datos generales" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold mb-1.5" style={labelSty}>
+                  Nombre de la sesión <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Ej: Examen de Admisión 2026-1"
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Modalidad <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.mode}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    mode: e.target.value as 'presencial' | 'en_linea',
-                  })
-                }
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
-              >
-                <option value="presencial">Presencial</option>
-                <option value="en_linea">En Línea</option>
-              </select>
-            </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={labelSty}>
+                  Periodo <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.period}
+                  onChange={(e) => setFormData({ ...formData, period: e.target.value })}
+                  className={inputCls}
+                  style={inputSty}
+                >
+                  <option value="">Selecciona un periodo…</option>
+                  {periods.map((p: { id: number; name: string }) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Tipo de Examen <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.exam_type}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    exam_type: e.target.value as 'propio' | 'cenaval',
-                  })
-                }
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
-              >
-                <option value="propio">Propio</option>
-                <option value="cenaval">CENAVAL</option>
-              </select>
-            </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={labelSty}>
+                  Modalidad <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.mode}
+                  onChange={(e) => setFormData({ ...formData, mode: e.target.value as 'presencial' | 'en_linea' })}
+                  className={inputCls}
+                  style={inputSty}
+                >
+                  <option value="presencial">Presencial</option>
+                  <option value="en_linea">En Línea</option>
+                </select>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Fecha <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                value={formData.exam_date}
-                onChange={(e) => setFormData({ ...formData, exam_date: e.target.value })}
-                min={new Date().toISOString().split('T')[0]}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
-              />
-            </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={labelSty}>
+                  Tipo de examen <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.exam_type}
+                  onChange={(e) => setFormData({ ...formData, exam_type: e.target.value as 'propio' | 'cenaval' })}
+                  className={inputCls}
+                  style={inputSty}
+                >
+                  <option value="propio">Propio</option>
+                  <option value="cenaval">CENAVAL</option>
+                </select>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Hora <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="time"
-                value={formData.exam_time}
-                onChange={(e) => setFormData({ ...formData, exam_time: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
-              />
-            </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={labelSty}>
+                  Fecha <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={formData.exam_date}
+                  onChange={(e) => setFormData({ ...formData, exam_date: e.target.value })}
+                  min={new Date().toISOString().split('T')[0]}
+                  className={inputCls}
+                  style={inputSty}
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Calificación mínima aprobatoria (0–100)
-              </label>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={formData.passing_score}
-                onChange={(e) =>
-                  setFormData({ ...formData, passing_score: e.target.value })
-                }
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
-              />
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={labelSty}>
+                  Hora <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="time"
+                  value={formData.exam_time}
+                  onChange={(e) => setFormData({ ...formData, exam_time: e.target.value })}
+                  className={inputCls}
+                  style={inputSty}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={labelSty}>
+                  Calificación mínima aprobatoria (0–100)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={formData.passing_score}
+                  onChange={(e) => setFormData({ ...formData, passing_score: e.target.value })}
+                  className={inputCls}
+                  style={inputSty}
+                />
+              </div>
             </div>
-          </div>
+          </section>
 
           {/* Live aspirant counter */}
           {formData.period && aspirantCounts.length > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm font-semibold text-blue-900 mb-2">
-                Aspirantes con pago validado en el periodo seleccionado:
+            <div
+              className="rounded-xl p-4"
+              style={{
+                background: 'var(--color-info-bg)',
+                border: '1px solid var(--color-info-border)',
+              }}
+            >
+              <p className="text-xs font-bold mb-2" style={{ color: 'var(--color-info)' }}>
+                Aspirantes con pago validado en el periodo seleccionado
               </p>
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-2">
                 {aspirantCounts.map((ac) => {
                   const configured = capacityByProgram[ac.program_id.toString()] ?? 0;
                   const sufficient = configured >= ac.aspirant_count;
+                  const style =
+                    configured === 0
+                      ? { background: 'var(--bg-surface-2)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }
+                      : sufficient
+                      ? { background: 'var(--color-success-bg)', color: 'var(--color-success)', border: '1px solid var(--color-success-border)' }
+                      : { background: 'var(--color-danger-bg)', color: 'var(--color-danger)', border: '1px solid var(--color-danger-border)' };
                   return (
-                    <div
-                      key={ac.program_id}
-                      className={`text-xs px-3 py-1.5 rounded-lg font-medium ${
-                        configured === 0
-                          ? 'bg-gray-100 text-gray-700'
-                          : sufficient
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}
-                    >
+                    <span key={ac.program_id} className="text-xs px-3 py-1.5 rounded-lg font-medium" style={style}>
                       {ac.program_code}: {ac.aspirant_count} aspirantes
                       {configured > 0 && ` / ${configured} lugares`}
                       {configured > 0 && !sufficient && ' ⚠️'}
-                    </div>
+                    </span>
                   );
                 })}
               </div>
             </div>
           )}
 
-          {/* Venues table */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-medium text-gray-900 dark:text-gray-100">Salones de Examen</h3>
-              <Button size="sm" variant="outline" onClick={handleAddVenue}>
-                <Plus size={14} className="mr-1" />
-                Agregar salón
-              </Button>
-            </div>
-
-            <div className="space-y-3">
+          {/* Venues */}
+          <section>
+            <SectionTitle label="Salones de examen" />
+            <div className="space-y-2 mb-2">
               {venues.map((venue, idx) => (
                 <div
                   key={idx}
-                  className="grid grid-cols-12 gap-2 items-center bg-gray-50 dark:bg-gray-700 rounded-lg p-3"
+                  className="grid grid-cols-12 gap-2 items-center rounded-xl p-3"
+                  style={{ background: 'var(--bg-surface-2)', border: '1px solid var(--border)' }}
                 >
                   <div className="col-span-4">
                     <select
                       value={venue.program}
                       onChange={(e) => handleVenueChange(idx, 'program', e.target.value)}
-                      className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-600 dark:text-gray-100"
+                      className="w-full px-2 py-1.5 rounded-lg text-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
+                      style={inputSty}
                     >
-                      <option value="">Programa...</option>
+                      <option value="">Programa…</option>
                       {programs.map((p: { id: number; code: string; name: string }) => (
-                        <option key={p.id} value={p.id}>
-                          {p.code}
-                        </option>
+                        <option key={p.id} value={p.id}>{p.code}</option>
                       ))}
                     </select>
                   </div>
@@ -333,7 +353,8 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
                       placeholder="Edificio"
                       value={venue.building}
                       onChange={(e) => handleVenueChange(idx, 'building', e.target.value)}
-                      className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-600 dark:text-gray-100"
+                      className="w-full px-2 py-1.5 rounded-lg text-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
+                      style={inputSty}
                     />
                   </div>
                   <div className="col-span-2">
@@ -342,7 +363,8 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
                       placeholder="Salón"
                       value={venue.room}
                       onChange={(e) => handleVenueChange(idx, 'room', e.target.value)}
-                      className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-600 dark:text-gray-100"
+                      className="w-full px-2 py-1.5 rounded-lg text-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
+                      style={inputSty}
                     />
                   </div>
                   <div className="col-span-2">
@@ -352,47 +374,59 @@ const CreateSessionModal = ({ onClose, onCreated }: CreateModalProps) => {
                       placeholder="Cap."
                       value={venue.capacity}
                       onChange={(e) => handleVenueChange(idx, 'capacity', e.target.value)}
-                      className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-600 dark:text-gray-100"
+                      className="w-full px-2 py-1.5 rounded-lg text-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
+                      style={inputSty}
                     />
                   </div>
                   <div className="col-span-1 flex justify-center">
                     {venues.length > 1 && (
                       <button
                         onClick={() => handleRemoveVenue(idx)}
-                        className="p-1 text-red-500 hover:bg-red-50 rounded"
+                        className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
+                        style={{ color: 'var(--color-danger)', background: 'var(--color-danger-bg)' }}
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={13} />
                       </button>
                     )}
                   </div>
                 </div>
               ))}
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <button
+              onClick={handleAddVenue}
+              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+              style={{
+                background: 'var(--bg-surface-2)',
+                border: '1px solid var(--border)',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              <Plus size={13} />
+              Agregar salón
+            </button>
+            <p className="text-xs mt-1.5" style={{ color: 'var(--text-muted)' }}>
               Columnas: Programa · Edificio · Salón · Capacidad
             </p>
-          </div>
+          </section>
         </div>
 
-        <div className="flex justify-end gap-3 p-6 border-t dark:border-gray-700">
-          <Button variant="outline" onClick={onClose}>
-            Cancelar
-          </Button>
+        <div
+          className="flex justify-end gap-3 p-6 border-t"
+          style={{ borderColor: 'var(--border)' }}
+        >
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button
             onClick={handleSubmit}
             isLoading={createMutation.isPending}
-            disabled={
-              !formData.name ||
-              !formData.period ||
-              !formData.exam_date ||
-              !formData.exam_time
-            }
+            disabled={!formData.name || !formData.period || !formData.exam_date || !formData.exam_time}
           >
             Crear Sesión
           </Button>
         </div>
+        </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
@@ -437,13 +471,9 @@ const GradingPanel = ({ session, onClose }: GradingPanelProps) => {
       alert('La calificación debe ser entre 0 y 100.');
       return;
     }
-
     setSaving((prev) => ({ ...prev, [aspirant.id]: true }));
     try {
-      await examsService.gradeAspirant(session.id, aspirant.id, {
-        attended,
-        exam_score: scoreVal,
-      });
+      await examsService.gradeAspirant(session.id, aspirant.id, { attended, exam_score: scoreVal });
       queryClient.invalidateQueries({ queryKey: ['aspirants', session.id] });
       queryClient.invalidateQueries({ queryKey: ['capacity-status', session.id] });
       refetch();
@@ -469,35 +499,59 @@ const GradingPanel = ({ session, onClose }: GradingPanelProps) => {
   }, {});
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center overflow-y-auto py-8 px-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-5xl">
+    <>
+      <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm" />
+      <div
+        className="fixed inset-0 z-[110] overflow-y-auto"
+        onClick={onClose}
+      >
+        <div className="flex min-h-full items-start justify-center p-6 sm:p-10">
+        <div
+          className="rounded-2xl shadow-2xl w-full max-w-5xl"
+          style={{ ...modalSty, border: '1px solid var(--border)' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b dark:border-gray-700">
+        <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: 'var(--border)' }}>
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{session.name}</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
+              {session.name}
+            </h2>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
               {session.period_name} · {session.exam_date} · Aprobatoria: {session.passing_score}
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-600 dark:text-gray-400">
+            <span
+              className="text-xs font-semibold px-2.5 py-1 rounded-full"
+              style={{ background: 'var(--color-info-bg)', color: 'var(--color-info)' }}
+            >
               {gradedCount}/{aspirants.length} calificados
             </span>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-              <X size={20} />
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ color: 'var(--text-muted)', background: 'var(--bg-surface-2)' }}
+            >
+              <X size={16} />
             </button>
           </div>
         </div>
 
         <div className="p-6 space-y-6">
-          {/* Capacity status panel — visible only to jefe on published sessions */}
+
+          {/* Capacity status — jefe only */}
           {isJefePanel && session.status === 'published' && capacityStatus.length > 0 && (
-            <div className="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+            <div
+              className="rounded-xl p-4"
+              style={{ background: 'var(--bg-surface-2)', border: '1px solid var(--border)' }}
+            >
               <div className="flex items-center gap-2 mb-3">
-                <Users size={16} className="text-gray-500 dark:text-gray-400" />
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                  Estado de Cupo por Programa
-                </h3>
+                <Users size={15} style={{ color: 'var(--text-muted)' }} />
+                <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                  Estado de cupo por programa
+                </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {capacityStatus.map((cs) => {
@@ -506,25 +560,30 @@ const GradingPanel = ({ session, onClose }: GradingPanelProps) => {
                   return (
                     <div
                       key={cs.program_id}
-                      className={`rounded-lg p-3 border ${
-                        full
-                          ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700'
-                          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600'
-                      }`}
+                      className="rounded-xl p-3"
+                      style={{
+                        background: full ? 'var(--color-danger-bg)' : 'var(--bg-surface)',
+                        border: `1px solid ${full ? 'var(--color-danger-border)' : 'var(--border)'}`,
+                      }}
                     >
-                      <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                        {cs.program_code}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 truncate">
-                        {cs.program_name}
-                      </p>
-                      <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5 mb-1">
+                      <p className="text-xs font-bold mb-0.5" style={{ color: 'var(--text-primary)' }}>{cs.program_code}</p>
+                      <p className="text-xs mb-2 truncate" style={{ color: 'var(--text-muted)' }}>{cs.program_name}</p>
+                      <div
+                        className="w-full rounded-full h-1.5 mb-1.5"
+                        style={{ background: 'var(--border)' }}
+                      >
                         <div
-                          className={`h-1.5 rounded-full ${full ? 'bg-red-500' : 'bg-green-500'}`}
-                          style={{ width: `${Math.min(100, Math.round(pct * 100))}%` }}
+                          className="h-1.5 rounded-full"
+                          style={{
+                            width: `${Math.min(100, Math.round(pct * 100))}%`,
+                            background: full ? 'var(--color-danger)' : 'var(--color-success)',
+                          }}
                         />
                       </div>
-                      <p className={`text-xs font-medium ${full ? 'text-red-600 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}>
+                      <p
+                        className="text-xs font-semibold"
+                        style={{ color: full ? 'var(--color-danger)' : 'var(--color-success)' }}
+                      >
                         {cs.accepted_count}/{cs.max_capacity} aceptados
                         {full ? ' — Cupo lleno' : ` — ${cs.available_spots} disponibles`}
                       </p>
@@ -535,164 +594,166 @@ const GradingPanel = ({ session, onClose }: GradingPanelProps) => {
             </div>
           )}
 
-          {aspirants.length === 0 && (
-            <div className="text-center py-12">
-              <ClipboardList className="mx-auto text-gray-400 mb-3" size={40} />
-              <p className="text-gray-500">
+          {aspirants.length === 0 ? (
+            <div className="text-center py-14">
+              <div
+                className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                style={{ background: 'var(--bg-surface-2)' }}
+              >
+                <ClipboardList size={26} style={{ color: 'var(--text-muted)' }} />
+              </div>
+              <p className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+                Sin aspirantes
+              </p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                 No hay aspirantes asignados a esta sesión todavía.
               </p>
             </div>
-          )}
+          ) : (
+            Object.entries(programGroups).map(([programCode, list]) => (
+              <div key={programCode}>
+                <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--text-muted)' }}>
+                  {programCode} — {list[0].program_name}
+                </p>
+                <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid var(--border)' }}>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                        {['Aspirante', 'Sede', 'Estado', 'Asistencia', 'Calificación', ''].map((h) => (
+                          <th
+                            key={h}
+                            className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide"
+                            style={{ color: 'var(--text-muted)', background: 'var(--bg-surface-2)' }}
+                          >
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {list.map((aspirant) => {
+                        const isGraded =
+                          aspirant.status === 'accepted' || aspirant.status === 'rejected';
+                        return (
+                          <tr
+                            key={aspirant.id}
+                            style={{ borderBottom: '1px solid var(--border)' }}
+                          >
+                            <td className="px-4 py-3">
+                              <p className="font-medium text-xs" style={{ color: 'var(--text-primary)' }}>
+                                {aspirant.student_name}
+                              </p>
+                              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                                {aspirant.student_curp}
+                              </p>
+                            </td>
+                            <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                              {aspirant.exam_location ?? '—'}
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge
+                                variant={
+                                  aspirant.status === 'accepted' ? 'success'
+                                    : aspirant.status === 'rejected' ? 'danger'
+                                    : 'warning'
+                                }
+                              >
+                                {aspirant.status_display}
+                              </Badge>
+                            </td>
 
-          {Object.entries(programGroups).map(([programCode, list]) => (
-            <div key={programCode}>
-              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
-                {programCode} — {list[0].program_name}
-              </h3>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700 text-left text-gray-500 dark:text-gray-400">
-                      <th className="pb-2 pr-4 font-medium">Aspirante</th>
-                      <th className="pb-2 pr-4 font-medium">Sede</th>
-                      <th className="pb-2 pr-4 font-medium">Estado</th>
-                      <th className="pb-2 pr-4 font-medium">Asistencia</th>
-                      <th className="pb-2 pr-4 font-medium">Calificación</th>
-                      <th className="pb-2" />
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                    {list.map((aspirant) => {
-                      const isGraded =
-                        aspirant.status === 'accepted' || aspirant.status === 'rejected';
-                      return (
-                        <tr key={aspirant.id}>
-                          <td className="py-2.5 pr-4">
-                            <p className="font-medium text-gray-900 dark:text-gray-100">{aspirant.student_name}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">{aspirant.student_curp}</p>
-                          </td>
-                          <td className="py-2.5 pr-4 text-xs text-gray-600 dark:text-gray-400">
-                            {aspirant.exam_location ?? '—'}
-                          </td>
-                          <td className="py-2.5 pr-4">
-                            <Badge
-                              variant={
-                                aspirant.status === 'accepted'
-                                  ? 'success'
-                                  : aspirant.status === 'rejected'
-                                  ? 'danger'
-                                  : 'warning'
-                              }
-                            >
-                              {aspirant.status_display}
-                            </Badge>
-                          </td>
-
-                          {isGraded ? (
-                            <>
-                              <td className="py-2.5 pr-4 text-xs text-gray-500 dark:text-gray-400">—</td>
-                              <td className="py-2.5 pr-4">
-                                {aspirant.exam_score !== null ? (
-                                  <span className="font-mono font-bold text-gray-900 dark:text-gray-100">
-                                    {aspirant.exam_score}
-                                  </span>
-                                ) : (
-                                  <span className="text-xs text-gray-400">Ausente</span>
-                                )}
-                              </td>
-                              <td className="py-2.5">
-                                {aspirant.status === 'accepted' ? (
-                                  <CheckCircle size={16} className="text-green-500" />
-                                ) : (
-                                  <XCircle size={16} className="text-red-500" />
-                                )}
-                              </td>
-                            </>
-                          ) : (
-                            <>
-                              <td className="py-2.5 pr-4">
-                                <div className="flex gap-3">
-                                  <label className="flex items-center gap-1 text-xs cursor-pointer">
-                                    <input
-                                      type="radio"
-                                      name={`attended-${aspirant.id}`}
-                                      checked={attendanceMap[aspirant.id] === true}
-                                      onChange={() =>
-                                        setAttendanceMap((p) => ({
-                                          ...p,
-                                          [aspirant.id]: true,
-                                        }))
-                                      }
-                                    />
-                                    Sí
-                                  </label>
-                                  <label className="flex items-center gap-1 text-xs cursor-pointer">
-                                    <input
-                                      type="radio"
-                                      name={`attended-${aspirant.id}`}
-                                      checked={attendanceMap[aspirant.id] === false}
-                                      onChange={() =>
-                                        setAttendanceMap((p) => ({
-                                          ...p,
-                                          [aspirant.id]: false,
-                                        }))
-                                      }
-                                    />
-                                    No
-                                  </label>
-                                </div>
-                              </td>
-                              <td className="py-2.5 pr-4">
-                                {attendanceMap[aspirant.id] === true && (
-                                  <input
-                                    type="number"
-                                    min={0}
-                                    max={100}
-                                    step={0.01}
-                                    placeholder="0-100"
-                                    value={scores[aspirant.id] ?? ''}
-                                    onChange={(e) =>
-                                      setScores((p) => ({
-                                        ...p,
-                                        [aspirant.id]: e.target.value,
-                                      }))
-                                    }
-                                    className="w-24 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
-                                  />
-                                )}
-                              </td>
-                              <td className="py-2.5">
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleGrade(aspirant)}
-                                  isLoading={saving[aspirant.id]}
-                                  disabled={
-                                    saving[aspirant.id] ||
-                                    attendanceMap[aspirant.id] === undefined ||
-                                    attendanceMap[aspirant.id] === null
+                            {isGraded ? (
+                              <>
+                                <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-muted)' }}>—</td>
+                                <td className="px-4 py-3">
+                                  {aspirant.exam_score !== null ? (
+                                    <span className="font-mono font-bold text-sm" style={{ color: 'var(--text-primary)' }}>
+                                      {aspirant.exam_score}
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Ausente</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3">
+                                  {aspirant.status === 'accepted'
+                                    ? <CheckCircle size={16} style={{ color: 'var(--color-success)' }} />
+                                    : <XCircle size={16} style={{ color: 'var(--color-danger)' }} />
                                   }
-                                >
-                                  Guardar
-                                </Button>
-                              </td>
-                            </>
-                          )}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                                </td>
+                              </>
+                            ) : (
+                              <>
+                                <td className="px-4 py-3">
+                                  <div className="flex gap-3">
+                                    {[
+                                      { val: true,  label: 'Sí' },
+                                      { val: false, label: 'No' },
+                                    ].map(({ val, label }) => (
+                                      <label key={label} className="flex items-center gap-1 text-xs cursor-pointer" style={{ color: 'var(--text-secondary)' }}>
+                                        <input
+                                          type="radio"
+                                          name={`attended-${aspirant.id}`}
+                                          checked={attendanceMap[aspirant.id] === val}
+                                          onChange={() =>
+                                            setAttendanceMap((p) => ({ ...p, [aspirant.id]: val }))
+                                          }
+                                        />
+                                        {label}
+                                      </label>
+                                    ))}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3">
+                                  {attendanceMap[aspirant.id] === true && (
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      max={100}
+                                      step={0.01}
+                                      placeholder="0-100"
+                                      value={scores[aspirant.id] ?? ''}
+                                      onChange={(e) =>
+                                        setScores((p) => ({ ...p, [aspirant.id]: e.target.value }))
+                                      }
+                                      className="w-20 px-2 py-1 rounded-lg text-xs focus:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
+                                      style={inputSty}
+                                    />
+                                  )}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleGrade(aspirant)}
+                                    isLoading={saving[aspirant.id]}
+                                    disabled={
+                                      saving[aspirant.id] ||
+                                      attendanceMap[aspirant.id] === undefined ||
+                                      attendanceMap[aspirant.id] === null
+                                    }
+                                  >
+                                    Guardar
+                                  </Button>
+                                </td>
+                              </>
+                            )}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
+        </div>
+        </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
+// ── Main Page ─────────────────────────────────────────────────────────────
 
 export const ExamSessions = () => {
   const { user } = useAuthStore();
@@ -703,16 +764,11 @@ export const ExamSessions = () => {
   const [selectedSession, setSelectedSession] = useState<ExamSessionDetail | null>(null);
   const [publishingId, setPublishingId] = useState<string | null>(null);
 
-  const isJefe =
-    user?.role === ROLES.ADMIN || user?.role === ROLES.JEFE_SERVICIOS;
+  const isJefe = user?.role === ROLES.ADMIN || user?.role === ROLES.JEFE_SERVICIOS;
 
   const { data, isLoading } = useQuery({
     queryKey: ['exam-sessions', page, statusFilter],
-    queryFn: () =>
-      examsService.getSessions({
-        page,
-        status: statusFilter || undefined,
-      }),
+    queryFn: () => examsService.getSessions({ page, status: statusFilter || undefined }),
   });
 
   const { data: selectedDetail } = useQuery({
@@ -722,34 +778,18 @@ export const ExamSessions = () => {
   });
 
   const handlePublish = async (session: ExamSession) => {
-    if (
-      !window.confirm(
-        `¿Publicar "${session.name}"? Se asignarán aspirantes automáticamente en segundo plano.`
-      )
-    )
+    if (!window.confirm(`¿Publicar "${session.name}"? Se asignarán aspirantes automáticamente en segundo plano.`))
       return;
-
     setPublishingId(session.id);
     try {
       await examsService.publishSession(session.id);
       queryClient.invalidateQueries({ queryKey: ['exam-sessions'] });
       alert('Sesión publicada. Los aspirantes recibirán su asignación por correo.');
     } catch (err: unknown) {
-      const errData = (err as { response?: { data?: { error?: string; deficits?: unknown[] } } })
-        ?.response?.data;
+      const errData = (err as { response?: { data?: { error?: string; deficits?: unknown[] } } })?.response?.data;
       if (errData?.deficits) {
-        const deficits = errData.deficits as Array<{
-          program: string;
-          aspirants: number;
-          capacity: number;
-          deficit: number;
-        }>;
-        const lines = deficits
-          .map(
-            (d) =>
-              `  • ${d.program}: ${d.aspirants} aspirantes, capacidad ${d.capacity} (déficit: ${d.deficit})`
-          )
-          .join('\n');
+        const deficits = errData.deficits as Array<{ program: string; aspirants: number; capacity: number; deficit: number }>;
+        const lines = deficits.map((d) => `  • ${d.program}: ${d.aspirants} aspirantes, capacidad ${d.capacity} (déficit: ${d.deficit})`).join('\n');
         alert(`Capacidad insuficiente:\n${lines}`);
       } else {
         alert(errData?.error ?? 'Error al publicar. Intenta de nuevo.');
@@ -761,86 +801,184 @@ export const ExamSessions = () => {
 
   const totalPages = data ? Math.ceil(data.count / 20) : 1;
 
+  // Derived stats
+  const totalSessions  = data?.count ?? 0;
+  const published      = data?.results?.filter((s) => s.status === 'published').length ?? 0;
+  const totalCapacity  = data?.results?.reduce((sum, s) => sum + (s.total_capacity ?? 0), 0) ?? 0;
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Exámenes de Admisión</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            {isJefe
-              ? 'Crea y publica sesiones de examen para aspirantes'
-              : 'Consulta y califica aspirantes asignados a tu programa'}
-          </p>
+    <div className="space-y-6 animate-fade-up">
+
+      {/* ── Header ──────────────────────────────────────────────────────── */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: 'var(--color-warning-bg)' }}
+          >
+            <ClipboardList size={20} style={{ color: 'var(--color-warning)' }} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+              Exámenes de Admisión
+            </h1>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+              {isJefe
+                ? 'Crea y publica sesiones de examen para aspirantes'
+                : 'Consulta y califica aspirantes asignados a tu programa'}
+            </p>
+          </div>
         </div>
         {isJefe && (
-          <Button onClick={() => setShowCreateModal(true)}>
-            <Plus size={18} className="mr-2" />
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white"
+            style={{ background: 'linear-gradient(135deg, #4f46e5, #6366f1)' }}
+          >
+            <Plus size={15} />
             Nueva Sesión
-          </Button>
+          </button>
         )}
       </div>
 
-      {/* Filters */}
-      <Card>
-        <div className="flex gap-4">
+      {/* ── Stats ───────────────────────────────────────────────────────── */}
+      {data && (
+        <div className="grid grid-cols-3 gap-4">
+          {[
+            { label: 'Total sesiones',       value: totalSessions, icon: <ClipboardList size={16} />, bg: 'var(--color-info-bg)',    color: 'var(--color-info)' },
+            { label: 'Sesiones publicadas',  value: published,     icon: <BookOpen size={16} />,      bg: 'var(--color-success-bg)', color: 'var(--color-success)' },
+            { label: 'Lugares configurados', value: totalCapacity, icon: <Users size={16} />,         bg: 'var(--color-warning-bg)', color: 'var(--color-warning)' },
+          ].map(({ label, value, icon, bg, color }) => (
+            <div
+              key={label}
+              className="rounded-xl p-4 flex items-center gap-3"
+              style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
+            >
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: bg }}>
+                <span style={{ color }}>{icon}</span>
+              </div>
+              <div>
+                <p className="text-xl font-bold leading-none" style={{ color: 'var(--text-primary)' }}>{value}</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{label}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Filtros ─────────────────────────────────────────────────────── */}
+      <div
+        className="rounded-xl p-4"
+        style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
+      >
+        <div className="flex items-center gap-3">
+          <p className="text-xs font-semibold shrink-0" style={{ color: 'var(--text-muted)' }}>
+            Filtrar por estado:
+          </p>
           <select
             value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(1);
-            }}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+            className="px-3 py-2 rounded-lg text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            style={inputSty}
           >
-            <option value="">Todos los estados</option>
+            <option value="">Todos</option>
             <option value="draft">Borrador</option>
             <option value="published">Publicado</option>
             <option value="completed">Completado</option>
           </select>
         </div>
-      </Card>
+      </div>
 
-      {/* Sessions list */}
-      <Card>
+      {/* ── Sessions list ────────────────────────────────────────────────── */}
+      <Card padding="none">
+        <div
+          className="flex items-center justify-between px-6 py-4 border-b"
+          style={{ borderColor: 'var(--border)' }}
+        >
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+            Sesiones de Examen
+          </h2>
+          <span
+            className="text-xs font-medium px-2 py-0.5 rounded-full"
+            style={{ background: 'var(--color-warning-bg)', color: 'var(--color-warning)' }}
+          >
+            {data?.count ?? 0} sesiones
+          </span>
+        </div>
+
         {isLoading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
+          <div className="flex justify-center py-14">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500" />
           </div>
         ) : !data || data.results.length === 0 ? (
-          <div className="text-center py-12">
-            <ClipboardList className="mx-auto text-gray-400 mb-3" size={48} />
-            <p className="text-gray-500">No hay sesiones de examen configuradas</p>
+          <div className="text-center py-16">
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+              style={{ background: 'var(--bg-surface-2)' }}
+            >
+              <ClipboardList size={26} style={{ color: 'var(--text-muted)' }} />
+            </div>
+            <p className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+              Sin sesiones
+            </p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              {isJefe ? 'Crea la primera sesión de examen.' : 'No hay sesiones de examen configuradas.'}
+            </p>
           </div>
         ) : (
           <>
-            <div className="space-y-3">
+            <div className="divide-y" style={{ '--tw-divide-color': 'var(--border)' } as React.CSSProperties}>
               {data.results.map((session) => (
                 <div
                   key={session.id}
-                  className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-gray-300 dark:hover:border-gray-500 transition-colors"
+                  className="flex items-start justify-between gap-4 px-6 py-4 transition-colors hover:bg-[var(--bg-surface-2)]"
                 >
-                  <div className="flex items-start gap-4">
-                    <div>
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <p className="font-semibold text-gray-900 dark:text-gray-100">{session.name}</p>
+                  {/* Left: session info */}
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div
+                      className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
+                      style={{
+                        background:
+                          session.status === 'completed' ? 'var(--color-success-bg)'
+                          : session.status === 'published' ? 'var(--color-info-bg)'
+                          : 'var(--color-warning-bg)',
+                      }}
+                    >
+                      <ClipboardList
+                        size={16}
+                        style={{
+                          color:
+                            session.status === 'completed' ? 'var(--color-success)'
+                            : session.status === 'published' ? 'var(--color-info)'
+                            : 'var(--color-warning)',
+                        }}
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                        <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
+                          {session.name}
+                        </p>
                         <Badge variant={STATUS_VARIANT[session.status] ?? 'default'}>
                           {session.status_display}
                         </Badge>
                       </div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {session.period_name} · {session.exam_date} a las {session.exam_time}
-                        {' · '}
-                        {session.mode === 'presencial' ? 'Presencial' : 'En Línea'}
-                      </p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                        {session.venue_count} salón{session.venue_count !== 1 ? 'es' : ''} ·{' '}
-                        {session.total_capacity} lugares · Aprobatoria: {session.passing_score}
-                      </p>
+                      <div className="flex flex-wrap gap-3 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                        <span className="flex items-center gap-1">
+                          <Calendar size={11} /> {session.exam_date} a las {session.exam_time}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MapPin size={11} /> {session.mode === 'presencial' ? 'Presencial' : 'En Línea'}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Users size={11} /> {session.total_capacity} lugares
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {/* Publish button (jefe + draft) */}
+                  {/* Right: actions */}
+                  <div className="flex items-center gap-2 shrink-0">
                     {isJefe && session.status === 'draft' && (
                       <Button
                         size="sm"
@@ -850,58 +988,49 @@ export const ExamSessions = () => {
                         disabled={publishingId === session.id}
                       >
                         {publishingId === session.id ? (
-                          <>
-                            <Loader2 size={14} className="mr-1 animate-spin" />
-                            Publicando...
-                          </>
+                          <><Loader2 size={13} className="mr-1 animate-spin" />Publicando…</>
                         ) : (
-                          <>
-                            <Send size={14} className="mr-1" />
-                            Publicar
-                          </>
+                          <><Send size={13} className="mr-1" />Publicar</>
                         )}
                       </Button>
                     )}
-
-                    {/* View / Grade button */}
-                    <Button
-                      size="sm"
-                      variant="outline"
+                    <button
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                      style={{
+                        background: 'var(--bg-surface-2)',
+                        border: '1px solid var(--border)',
+                        color: 'var(--text-secondary)',
+                      }}
                       onClick={async () => {
                         const detail = await examsService.getSession(session.id);
                         setSelectedSession(detail);
                       }}
                     >
-                      <Eye size={14} className="mr-1" />
+                      <Eye size={13} />
                       {session.status === 'published' ? 'Calificar' : 'Ver'}
-                    </Button>
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
 
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <p className="text-sm text-gray-500 dark:text-gray-400">{data.count} sesiones</p>
+              <div
+                className="flex items-center justify-between px-6 py-4 border-t"
+                style={{ borderColor: 'var(--border)' }}
+              >
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  {data.count} sesiones
+                </p>
                 <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setPage((p) => p - 1)}
-                    disabled={page === 1}
-                  >
-                    <ChevronLeft size={16} />
+                  <Button size="sm" variant="outline" onClick={() => setPage((p) => p - 1)} disabled={page === 1}>
+                    <ChevronLeft size={15} />
                   </Button>
-                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                  <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
                     {page} / {totalPages}
                   </span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setPage((p) => p + 1)}
-                    disabled={page === totalPages}
-                  >
-                    <ChevronRight size={16} />
+                  <Button size="sm" variant="outline" onClick={() => setPage((p) => p + 1)} disabled={page === totalPages}>
+                    <ChevronRight size={15} />
                   </Button>
                 </div>
               </div>
@@ -910,7 +1039,6 @@ export const ExamSessions = () => {
         )}
       </Card>
 
-      {/* Create modal */}
       {showCreateModal && (
         <CreateSessionModal
           onClose={() => setShowCreateModal(false)}
@@ -918,7 +1046,6 @@ export const ExamSessions = () => {
         />
       )}
 
-      {/* Grading panel */}
       {selectedSession && (selectedDetail || selectedSession) && (
         <GradingPanel
           session={(selectedDetail ?? selectedSession) as ExamSessionDetail}

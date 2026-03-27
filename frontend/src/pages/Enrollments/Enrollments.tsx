@@ -8,37 +8,45 @@ import { enrollmentsService } from '@/services/enrollments/enrollmentsService';
 import { useAuthStore } from '@/store/authStore';
 import type { EnrollmentDetail, EnrollmentDocument } from '@/types';
 import {
-  GraduationCap,
-  Search,
-  ChevronLeft,
-  ChevronRight,
-  CheckCircle,
-  XCircle,
-  Eye,
-  X,
-  FileText,
-  Download,
+  GraduationCap, Search, ChevronLeft, ChevronRight,
+  CheckCircle, XCircle, Eye, X, FileText, Download, AlertCircle,
+  Clock, Users,
 } from 'lucide-react';
 
+// ── Status maps ───────────────────────────────────────────────────────────
+
 const STATUS_VARIANTS: Record<string, 'info' | 'warning' | 'success' | 'danger' | 'default'> = {
-  pending_docs: 'warning',
-  docs_submitted: 'warning',
-  docs_approved: 'info',
-  pending_payment: 'info',
+  pending_docs:      'warning',
+  docs_submitted:    'warning',
+  docs_approved:     'info',
+  pending_payment:   'info',
   payment_submitted: 'info',
   payment_validated: 'info',
-  enrolled: 'success',
-  active: 'success',
-  withdrawn: 'danger',
+  enrolled:          'success',
+  active:            'success',
+  withdrawn:         'danger',
 };
 
 const DOC_STATUS_VARIANT: Record<string, 'warning' | 'success' | 'danger'> = {
-  pending: 'warning',
+  pending:  'warning',
   approved: 'success',
   rejected: 'danger',
 };
 
-// ── Detail Modal ──────────────────────────────────────────────────────────────
+// ── Shared style helpers ─────────────────────────────────────────────────
+
+const inputStyle = {
+  background: 'var(--bg-surface-2)',
+  border: '1.5px solid var(--border)',
+  color: 'var(--text-primary)',
+} as const;
+
+const modalStyle = {
+  background: 'var(--bg-surface)',
+  borderColor: 'var(--border)',
+} as const;
+
+// ── Enrollment Detail Modal ───────────────────────────────────────────────
 
 interface EnrollmentDetailModalProps {
   enrollment: EnrollmentDetail;
@@ -58,22 +66,15 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
 
   const reviewDocMutation = useMutation({
     mutationFn: ({
-      documentId,
-      action,
-      notes,
-    }: {
-      documentId: string;
-      action: 'approve' | 'reject';
-      notes: string;
-    }) => enrollmentsService.reviewDocument(enrollment.id, documentId, action, notes),
+      documentId, action, notes,
+    }: { documentId: string; action: 'approve' | 'reject'; notes: string }) =>
+      enrollmentsService.reviewDocument(enrollment.id, documentId, action, notes),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['enrollments'] });
       queryClient.invalidateQueries({ queryKey: ['enrollment', enrollment.id] });
       onRefresh();
     },
-    onError: () => {
-      alert('Error al revisar el documento. Intenta de nuevo.');
-    },
+    onError: () => { alert('Error al revisar el documento. Intenta de nuevo.'); },
   });
 
   const confirmMutation = useMutation({
@@ -96,27 +97,36 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
     },
   });
 
-  // Documentos que ya tienen archivo subido (excluye placeholders)
   const uploadedDocs = enrollment.documents.filter((d) => !!d.file_name);
-  const requiredUploadedDocs = uploadedDocs.filter((d) =>
-    REQUIRED_DOC_TYPES.includes(d.document_type)
-  );
+  const requiredUploadedDocs = uploadedDocs.filter((d) => REQUIRED_DOC_TYPES.includes(d.document_type));
   const allRequiredApproved =
     requiredUploadedDocs.length === REQUIRED_DOC_TYPES.length &&
     requiredUploadedDocs.every((d) => d.status === 'approved');
-
   const pendingReview = uploadedDocs.filter((d) => d.status === 'pending').length;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center overflow-y-auto py-8 px-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-3xl">
+    <>
+      <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm" />
+      <div
+        className="fixed inset-0 z-[110] overflow-y-auto"
+        onClick={onClose}
+      >
+        <div className="flex min-h-full items-start justify-center p-6 sm:p-10">
+        <div
+          className="rounded-2xl shadow-2xl w-full max-w-3xl"
+          style={{ ...modalStyle, border: '1px solid var(--border)' }}
+          onClick={(e) => e.stopPropagation()}
+        >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b dark:border-gray-700">
+        <div
+          className="flex items-center justify-between p-6 border-b"
+          style={{ borderColor: 'var(--border)' }}
+        >
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
               Inscripción — {enrollment.matricula}
             </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            <p className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
               {enrollment.student_name} · {enrollment.program_code}
             </p>
           </div>
@@ -124,30 +134,34 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
             <Badge variant={STATUS_VARIANTS[enrollment.status] ?? 'default'}>
               {enrollment.status_display}
             </Badge>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-              <X size={20} />
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
+              style={{ color: 'var(--text-muted)', background: 'var(--bg-surface-2)' }}
+            >
+              <X size={16} />
             </button>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-gray-200 dark:border-gray-700">
+        <div className="border-b" style={{ borderColor: 'var(--border)' }}>
           <nav className="flex px-6">
-            {[
+            {([
               { id: 'info' as const, label: 'Información' },
               {
                 id: 'documents' as const,
                 label: `Documentos${pendingReview > 0 ? ` (${pendingReview} pendiente${pendingReview > 1 ? 's' : ''})` : ''}`,
               },
-            ].map(({ id, label }) => (
+            ] as const).map(({ id, label }) => (
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
-                className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === id
-                    ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300'
-                }`}
+                className="py-3 px-4 text-sm font-medium border-b-2 transition-colors"
+                style={{
+                  borderColor: activeTab === id ? '#6366f1' : 'transparent',
+                  color: activeTab === id ? '#6366f1' : 'var(--text-secondary)',
+                }}
               >
                 {label}
               </button>
@@ -160,65 +174,49 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
           {activeTab === 'info' && (
             <div className="space-y-6">
               <section>
-                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+                <p
+                  className="text-xs font-bold uppercase tracking-widest mb-3"
+                  style={{ color: 'var(--text-muted)' }}
+                >
                   Información del Estudiante
-                </h3>
+                </p>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                  <div>
-                    <span className="text-gray-500 dark:text-gray-400">Nombre:</span>{' '}
-                    <span className="font-medium text-gray-900 dark:text-gray-100">{enrollment.student_name}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500 dark:text-gray-400">CURP:</span>{' '}
-                    <span className="font-medium text-gray-900 dark:text-gray-100">{enrollment.student_curp}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500 dark:text-gray-400">Programa:</span>{' '}
-                    <span className="font-medium text-gray-900 dark:text-gray-100">
-                      {enrollment.program_code} — {enrollment.program_name}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500 dark:text-gray-400">Periodo:</span>{' '}
-                    <span className="font-medium text-gray-900 dark:text-gray-100">{enrollment.period_name}</span>
-                  </div>
-                  {enrollment.student?.institutional_email && (
-                    <div className="col-span-2">
-                      <span className="text-gray-500 dark:text-gray-400">Correo institucional:</span>{' '}
-                      <span className="font-medium text-gray-900 dark:text-gray-100">
-                        {enrollment.student.institutional_email}
-                      </span>
+                  {[
+                    { label: 'Nombre',   value: enrollment.student_name },
+                    { label: 'CURP',     value: enrollment.student_curp },
+                    { label: 'Programa', value: `${enrollment.program_code} — ${enrollment.program_name}` },
+                    { label: 'Periodo',  value: enrollment.period_name },
+                    ...(enrollment.student?.institutional_email
+                      ? [{ label: 'Correo institucional', value: enrollment.student.institutional_email }]
+                      : []),
+                    ...(enrollment.group    ? [{ label: 'Grupo',   value: enrollment.group }]    : []),
+                    ...(enrollment.schedule ? [{ label: 'Horario', value: enrollment.schedule }] : []),
+                  ].map(({ label, value }) => (
+                    <div key={label} className={label === 'Correo institucional' ? 'col-span-2' : ''}>
+                      <span style={{ color: 'var(--text-muted)' }}>{label}:</span>{' '}
+                      <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{value}</span>
                     </div>
-                  )}
-                  {enrollment.group && (
-                    <div>
-                      <span className="text-gray-500 dark:text-gray-400">Grupo:</span>{' '}
-                      <span className="font-medium text-gray-900 dark:text-gray-100">{enrollment.group}</span>
-                    </div>
-                  )}
-                  {enrollment.schedule && (
-                    <div>
-                      <span className="text-gray-500 dark:text-gray-400">Horario:</span>{' '}
-                      <span className="font-medium text-gray-900 dark:text-gray-100">{enrollment.schedule}</span>
-                    </div>
-                  )}
+                  ))}
                 </div>
               </section>
 
-              {/* Asignar grupo/horario (si aún no se ha asignado) */}
+              {/* Asignar grupo/horario */}
               {!enrollment.group && enrollment.status === 'pending_docs' && (
                 <section>
-                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+                  <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--text-muted)' }}>
                     Asignar Grupo y Horario
-                  </h3>
+                  </p>
                   {!showConfirmForm ? (
                     <Button size="sm" variant="outline" onClick={() => setShowConfirmForm(true)}>
                       Asignar Grupo y Horario
                     </Button>
                   ) : (
-                    <div className="space-y-3 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                    <div
+                      className="space-y-3 rounded-xl p-4"
+                      style={{ background: 'var(--bg-surface-2)', border: '1px solid var(--border)' }}
+                    >
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
                           Grupo <span className="text-red-500">*</span>
                         </label>
                         <Input
@@ -228,7 +226,7 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
                           Horario <span className="text-red-500">*</span>
                         </label>
                         <Input
@@ -246,11 +244,7 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
                         >
                           Guardar
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setShowConfirmForm(false)}
-                        >
+                        <Button size="sm" variant="outline" onClick={() => setShowConfirmForm(false)}>
                           Cancelar
                         </Button>
                       </div>
@@ -259,23 +253,35 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
                 </section>
               )}
 
-              {/* Estado de documentos requeridos */}
+              {/* Estado de documentos */}
               {enrollment.status === 'pending_docs' && (
                 <section>
-                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                  <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>
                     Estado de Documentos
-                  </h3>
+                  </p>
                   {allRequiredApproved ? (
-                    <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
-                      <CheckCircle size={16} className="text-green-600 flex-shrink-0" />
-                      Todos los documentos requeridos han sido aprobados. La inscripción se
-                      completará automáticamente.
+                    <div
+                      className="flex items-center gap-2.5 p-3 rounded-xl text-sm"
+                      style={{
+                        background: 'var(--color-success-bg)',
+                        border: '1px solid var(--color-success-border)',
+                        color: 'var(--color-success)',
+                      }}
+                    >
+                      <CheckCircle size={15} className="shrink-0" />
+                      Todos los documentos requeridos han sido aprobados. La inscripción se completará automáticamente.
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-                      <FileText size={16} className="text-yellow-600 flex-shrink-0" />
-                      Revisa la pestaña <strong className="mx-1">Documentos</strong> para
-                      aprobar o rechazar los archivos del alumno.
+                    <div
+                      className="flex items-center gap-2.5 p-3 rounded-xl text-sm"
+                      style={{
+                        background: 'var(--color-warning-bg)',
+                        border: '1px solid var(--color-warning-border)',
+                        color: 'var(--color-warning)',
+                      }}
+                    >
+                      <FileText size={15} className="shrink-0" />
+                      Revisa la pestaña <strong className="mx-1">Documentos</strong> para aprobar o rechazar los archivos del alumno.
                     </div>
                   )}
                 </section>
@@ -287,18 +293,25 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
           {activeTab === 'documents' && (
             <div className="space-y-3">
               {enrollment.documents.length === 0 ? (
-                <p className="text-sm text-gray-500 py-4 text-center">
-                  El alumno aún no ha subido documentos.
-                </p>
+                <div className="text-center py-10">
+                  <FileText size={32} className="mx-auto mb-2" style={{ color: 'var(--text-muted)' }} />
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                    El alumno aún no ha subido documentos.
+                  </p>
+                </div>
               ) : (
                 enrollment.documents.map((doc: EnrollmentDocument) => {
                   const hasFile = !!doc.file_name;
                   return (
-                    <div key={doc.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                    <div
+                      key={doc.id}
+                      className="rounded-xl p-4"
+                      style={{ background: 'var(--bg-surface-2)', border: '1px solid var(--border)' }}
+                    >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <FileText size={16} className="text-gray-400" />
-                          <span className="font-medium text-gray-900 dark:text-gray-100 text-sm">
+                          <FileText size={15} style={{ color: 'var(--text-muted)' }} />
+                          <span className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>
                             {doc.document_type_display}
                           </span>
                         </div>
@@ -309,14 +322,15 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
 
                       {hasFile && (
                         <>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{doc.file_name}</p>
+                          <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>{doc.file_name}</p>
 
                           {doc.file_url && (
                             <a
                               href={doc.file_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-xs text-primary-600 hover:underline inline-flex items-center gap-1 mb-2"
+                              className="inline-flex items-center gap-1 text-xs font-medium mb-2 hover:underline"
+                              style={{ color: 'var(--color-info)' }}
                             >
                               <Eye size={12} />
                               Ver archivo
@@ -324,10 +338,18 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
                           )}
 
                           {doc.reviewer_notes && (
-                            <p className="text-xs text-gray-600 mt-1">
-                              <span className="font-medium">Observación:</span>{' '}
-                              {doc.reviewer_notes}
-                            </p>
+                            <div
+                              className="flex items-start gap-2 mt-2 p-2.5 rounded-lg"
+                              style={{
+                                background: 'var(--color-warning-bg)',
+                                border: '1px solid var(--color-warning-border)',
+                              }}
+                            >
+                              <AlertCircle size={13} className="shrink-0 mt-0.5" style={{ color: 'var(--color-warning)' }} />
+                              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                                <span className="font-semibold">Observación:</span> {doc.reviewer_notes}
+                              </p>
+                            </div>
                           )}
 
                           {doc.status === 'pending' && (
@@ -337,43 +359,37 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
                                 placeholder="Observación para el alumno (requerido para rechazar)"
                                 value={reviewNotes[doc.id] ?? ''}
                                 onChange={(e) =>
-                                  setReviewNotes((prev) => ({
-                                    ...prev,
-                                    [doc.id]: e.target.value,
-                                  }))
+                                  setReviewNotes((prev) => ({ ...prev, [doc.id]: e.target.value }))
                                 }
-                                className="w-full text-sm px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none dark:bg-gray-700 dark:text-gray-100"
+                                className="w-full text-sm px-3 py-2 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 resize-none"
+                                style={inputStyle}
                               />
                               <div className="flex gap-2">
                                 <Button
                                   size="sm"
                                   variant="success"
-                                  onClick={() =>
-                                    reviewDocMutation.mutate({
-                                      documentId: doc.id,
-                                      action: 'approve',
-                                      notes: reviewNotes[doc.id] ?? '',
-                                    })
-                                  }
+                                  onClick={() => reviewDocMutation.mutate({
+                                    documentId: doc.id,
+                                    action: 'approve',
+                                    notes: reviewNotes[doc.id] ?? '',
+                                  })}
                                   isLoading={reviewDocMutation.isPending}
                                 >
-                                  <CheckCircle size={14} className="mr-1" />
+                                  <CheckCircle size={13} className="mr-1" />
                                   Aprobar
                                 </Button>
                                 <Button
                                   size="sm"
                                   variant="danger"
                                   disabled={!reviewNotes[doc.id]?.trim()}
-                                  onClick={() =>
-                                    reviewDocMutation.mutate({
-                                      documentId: doc.id,
-                                      action: 'reject',
-                                      notes: reviewNotes[doc.id] ?? '',
-                                    })
-                                  }
+                                  onClick={() => reviewDocMutation.mutate({
+                                    documentId: doc.id,
+                                    action: 'reject',
+                                    notes: reviewNotes[doc.id] ?? '',
+                                  })}
                                   isLoading={reviewDocMutation.isPending}
                                 >
-                                  <XCircle size={14} className="mr-1" />
+                                  <XCircle size={13} className="mr-1" />
                                   Rechazar
                                 </Button>
                               </div>
@@ -388,12 +404,14 @@ const EnrollmentDetailModal = ({ enrollment, onClose, onRefresh }: EnrollmentDet
             </div>
           )}
         </div>
+        </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
+// ── Main Page ─────────────────────────────────────────────────────────────
 
 export const Enrollments = () => {
   const [page, setPage] = useState(1);
@@ -440,50 +458,118 @@ export const Enrollments = () => {
     }
   };
 
+  // Quick stats from loaded data
+  const totalCount = data?.count ?? 0;
+  const pendingDocs = data?.results?.filter((e) =>
+    e.documents?.some((d) => d.status === 'pending')
+  ).length ?? 0;
+  const allApproved = data?.results?.filter((e) =>
+    e.documents?.length > 0 && e.documents?.every((d) => d.status === 'approved')
+  ).length ?? 0;
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Inscripciones</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Revisión de documentos y confirmación de inscripciones formales
-          </p>
+    <div className="space-y-6 animate-fade-up">
+
+      {/* ── Header ──────────────────────────────────────────────────────── */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: 'var(--color-success-bg)' }}
+          >
+            <GraduationCap size={20} style={{ color: 'var(--color-success)' }} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+              Inscripciones
+            </h1>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+              Revisión de documentos y confirmación de inscripciones formales
+            </p>
+          </div>
         </div>
         {canExport && (
-          <Button
-            variant="outline"
+          <button
             onClick={handleExportCsv}
-            isLoading={isExporting}
+            disabled={isExporting}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+            style={{
+              background: 'var(--bg-surface)',
+              border: '1.5px solid var(--border)',
+              color: 'var(--text-primary)',
+              opacity: isExporting ? 0.6 : 1,
+            }}
           >
-            <Download size={16} className="mr-2" />
-            Exportar CSV
-          </Button>
+            <Download size={15} />
+            {isExporting ? 'Exportando…' : 'Exportar CSV'}
+          </button>
         )}
       </div>
 
-      {/* Filtros */}
-      <Card>
-        <div className="flex flex-col sm:flex-row gap-4">
+      {/* ── Mini stats ─────────────────────────────────────────────────── */}
+      {data && (
+        <div className="grid grid-cols-3 gap-4">
+          {[
+            { label: 'Total inscritos',       value: totalCount,  icon: <Users size={16} />,         bg: 'var(--color-info-bg)',    color: 'var(--color-info)' },
+            { label: 'Docs pendientes',        value: pendingDocs, icon: <Clock size={16} />,          bg: 'var(--color-warning-bg)', color: 'var(--color-warning)' },
+            { label: 'Documentos aprobados',   value: allApproved, icon: <CheckCircle size={16} />,    bg: 'var(--color-success-bg)', color: 'var(--color-success)' },
+          ].map(({ label, value, icon, bg, color }) => (
+            <div
+              key={label}
+              className="rounded-xl p-4 flex items-center gap-3"
+              style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
+            >
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: bg }}
+              >
+                <span style={{ color }}>{icon}</span>
+              </div>
+              <div>
+                <p className="text-xl font-bold leading-none" style={{ color: 'var(--text-primary)' }}>{value}</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{label}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Filtros ─────────────────────────────────────────────────────── */}
+      <div
+        className="rounded-xl p-4"
+        style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
+      >
+        <div className="flex flex-col sm:flex-row gap-3">
           <form onSubmit={handleSearch} className="flex gap-2 flex-1">
-            <Input
-              placeholder="Buscar por nombre, matrícula, CURP..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="flex-1"
-            />
-            <Button type="submit" variant="outline">
-              <Search size={18} />
-            </Button>
+            <div className="relative flex-1">
+              <Search
+                size={15}
+                className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                style={{ color: 'var(--text-muted)' }}
+              />
+              <input
+                type="text"
+                placeholder="Buscar por nombre, matrícula, CURP…"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 rounded-lg text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                style={inputStyle}
+              />
+            </div>
+            <button
+              type="submit"
+              className="px-4 py-2 rounded-lg text-sm font-semibold text-white shrink-0"
+              style={{ background: 'linear-gradient(135deg, #4f46e5, #6366f1)' }}
+            >
+              <Search size={14} />
+            </button>
           </form>
 
           <select
             value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(1);
-            }}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+            className="px-3 py-2 rounded-lg text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            style={inputStyle}
           >
             <option value="">Todos los estados</option>
             <option value="pending_docs">Documentos Pendientes</option>
@@ -492,89 +578,133 @@ export const Enrollments = () => {
             <option value="withdrawn">Baja</option>
           </select>
         </div>
-      </Card>
+      </div>
 
-      {/* Tabla */}
-      <Card>
+      {/* ── Tabla ───────────────────────────────────────────────────────── */}
+      <Card padding="none">
+        <div
+          className="flex items-center justify-between px-6 py-4 border-b"
+          style={{ borderColor: 'var(--border)' }}
+        >
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+            Lista de Inscripciones
+          </h2>
+          {data && (
+            <span
+              className="text-xs font-medium px-2 py-0.5 rounded-full"
+              style={{ background: 'var(--color-success-bg)', color: 'var(--color-success)' }}
+            >
+              {data.count} registros
+            </span>
+          )}
+        </div>
+
         {isLoading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
+          <div className="flex justify-center py-14">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500" />
           </div>
         ) : !data || data.results.length === 0 ? (
-          <div className="text-center py-12">
-            <GraduationCap className="mx-auto text-gray-400 mb-3" size={48} />
-            <p className="text-gray-500">No se encontraron inscripciones</p>
+          <div className="text-center py-16">
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+              style={{ background: 'var(--bg-surface-2)' }}
+            >
+              <GraduationCap size={26} style={{ color: 'var(--text-muted)' }} />
+            </div>
+            <p className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+              Sin inscripciones
+            </p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              No se encontraron inscripciones con los filtros actuales
+            </p>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200 dark:border-gray-700 text-left text-gray-500 dark:text-gray-400">
-                    <th className="pb-3 pr-4 font-medium">Matrícula</th>
-                    <th className="pb-3 pr-4 font-medium">Estudiante</th>
-                    <th className="pb-3 pr-4 font-medium">Programa</th>
-                    <th className="pb-3 pr-4 font-medium">Estado</th>
-                    <th className="pb-3 font-medium">Docs</th>
-                    <th className="pb-3" />
+                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                    {['Matrícula', 'Estudiante', 'Programa', 'Estado', 'Docs', ''].map((h) => (
+                      <th
+                        key={h}
+                        className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide"
+                        style={{ color: 'var(--text-muted)', background: 'var(--bg-surface)' }}
+                      >
+                        {h}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                <tbody>
                   {data.results.map((enrollment) => {
-                    const pendingDocs = enrollment.documents?.filter(
-                      (d) => d.status === 'pending'
-                    ).length ?? 0;
-                    const rejectedDocs = enrollment.documents?.filter(
-                      (d) => d.status === 'rejected'
-                    ).length ?? 0;
-
+                    const pDocs = enrollment.documents?.filter((d) => d.status === 'pending').length ?? 0;
+                    const rDocs = enrollment.documents?.filter((d) => d.status === 'rejected').length ?? 0;
                     return (
-                      <tr key={enrollment.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td className="py-3 pr-4 font-mono font-semibold text-gray-900 dark:text-gray-100">
+                      <tr
+                        key={enrollment.id}
+                        style={{ borderBottom: '1px solid var(--border)' }}
+                        className="transition-colors hover:bg-[var(--bg-surface-2)]"
+                      >
+                        <td className="px-6 py-3 font-mono font-semibold text-xs" style={{ color: 'var(--text-primary)' }}>
                           {enrollment.matricula}
                         </td>
-                        <td className="py-3 pr-4">
-                          <p className="font-medium text-gray-900 dark:text-gray-100">{enrollment.student_name}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{enrollment.student_curp}</p>
+                        <td className="px-6 py-3">
+                          <p className="font-medium" style={{ color: 'var(--text-primary)' }}>{enrollment.student_name}</p>
+                          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{enrollment.student_curp}</p>
                         </td>
-                        <td className="py-3 pr-4">
-                          <p className="font-medium text-gray-900 dark:text-gray-100">{enrollment.program_code}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{enrollment.period_name}</p>
+                        <td className="px-6 py-3">
+                          <p className="font-medium" style={{ color: 'var(--text-primary)' }}>{enrollment.program_code}</p>
+                          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{enrollment.period_name}</p>
                         </td>
-                        <td className="py-3 pr-4">
+                        <td className="px-6 py-3">
                           <Badge variant={STATUS_VARIANTS[enrollment.status] ?? 'default'}>
                             {enrollment.status_display}
                           </Badge>
                         </td>
-                        <td className="py-3 pr-4">
-                          {pendingDocs > 0 && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
-                              {pendingDocs} pendiente{pendingDocs > 1 ? 's' : ''}
-                            </span>
-                          )}
-                          {rejectedDocs > 0 && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 ml-1">
-                              {rejectedDocs} rechazado{rejectedDocs > 1 ? 's' : ''}
-                            </span>
-                          )}
-                          {pendingDocs === 0 && rejectedDocs === 0 && enrollment.documents?.length > 0 && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                              Todos aprobados
-                            </span>
-                          )}
-                          {enrollment.documents?.length === 0 && (
-                            <span className="text-xs text-gray-400">Sin docs</span>
-                          )}
+                        <td className="px-6 py-3">
+                          <div className="flex flex-wrap gap-1">
+                            {pDocs > 0 && (
+                              <span
+                                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                                style={{ background: 'var(--color-warning-bg)', color: 'var(--color-warning)' }}
+                              >
+                                {pDocs} pendiente{pDocs > 1 ? 's' : ''}
+                              </span>
+                            )}
+                            {rDocs > 0 && (
+                              <span
+                                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                                style={{ background: 'var(--color-danger-bg)', color: 'var(--color-danger)' }}
+                              >
+                                {rDocs} rechazado{rDocs > 1 ? 's' : ''}
+                              </span>
+                            )}
+                            {pDocs === 0 && rDocs === 0 && enrollment.documents?.length > 0 && (
+                              <span
+                                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                                style={{ background: 'var(--color-success-bg)', color: 'var(--color-success)' }}
+                              >
+                                Todos aprobados
+                              </span>
+                            )}
+                            {enrollment.documents?.length === 0 && (
+                              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Sin docs</span>
+                            )}
+                          </div>
                         </td>
-                        <td className="py-3 text-right">
-                          <Button
-                            size="sm"
-                            variant="outline"
+                        <td className="px-6 py-3 text-right">
+                          <button
                             onClick={() => setSelectedId(enrollment.id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ml-auto"
+                            style={{
+                              background: 'var(--bg-surface-2)',
+                              border: '1px solid var(--border)',
+                              color: 'var(--text-secondary)',
+                            }}
                           >
-                            <Eye size={14} className="mr-1" />
+                            <Eye size={13} />
                             Ver
-                          </Button>
+                          </button>
                         </td>
                       </tr>
                     );
@@ -583,31 +713,23 @@ export const Enrollments = () => {
               </table>
             </div>
 
-            {/* Paginación */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+              <div
+                className="flex items-center justify-between px-6 py-4 border-t"
+                style={{ borderColor: 'var(--border)' }}
+              >
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                   {data.count} inscripción{data.count !== 1 ? 'es' : ''}
                 </p>
                 <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setPage((p) => p - 1)}
-                    disabled={page === 1}
-                  >
-                    <ChevronLeft size={16} />
+                  <Button size="sm" variant="outline" onClick={() => setPage((p) => p - 1)} disabled={page === 1}>
+                    <ChevronLeft size={15} />
                   </Button>
-                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                  <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
                     {page} / {totalPages}
                   </span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setPage((p) => p + 1)}
-                    disabled={page === totalPages}
-                  >
-                    <ChevronRight size={16} />
+                  <Button size="sm" variant="outline" onClick={() => setPage((p) => p + 1)} disabled={page === totalPages}>
+                    <ChevronRight size={15} />
                   </Button>
                 </div>
               </div>

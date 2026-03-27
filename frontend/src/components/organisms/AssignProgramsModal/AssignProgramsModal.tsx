@@ -51,11 +51,18 @@ export const AssignProgramsModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen px-4">
-        <div className="fixed inset-0 bg-black opacity-50" onClick={onClose}></div>
-
-        <div className="relative bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full p-6 shadow-xl">
+    <>
+      <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm" />
+      <div
+        className="fixed inset-0 z-[110] overflow-y-auto"
+        onClick={onClose}
+      >
+        <div className="flex min-h-full items-start justify-center p-6 sm:p-10">
+        <div
+          className="relative w-full max-w-2xl rounded-2xl shadow-2xl p-6"
+          style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               Asignar Programas
@@ -105,7 +112,8 @@ export const AssignProgramsModal = ({
             </Button>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };

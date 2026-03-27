@@ -34,13 +34,23 @@ export const StudentDetailsModal = ({ isOpen, onClose, student }: StudentDetails
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen px-4">
-        <div className="fixed inset-0 bg-black opacity-50" onClick={onClose}></div>
-
-        <div className="relative bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full shadow-xl">
+    <>
+      <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm" />
+      <div
+        className="fixed inset-0 z-[110] overflow-y-auto"
+        onClick={onClose}
+      >
+        <div className="flex min-h-full items-start justify-center p-6 sm:p-10">
+        <div
+          className="relative w-full max-w-2xl rounded-2xl shadow-2xl"
+          style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
+          onClick={(e) => e.stopPropagation()}
+        >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+          <div
+            className="flex items-center justify-between p-6 border-b"
+            style={{ borderColor: 'var(--border)' }}
+          >
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               Detalles del Estudiante
             </h2>
@@ -169,13 +179,14 @@ export const StudentDetailsModal = ({ isOpen, onClose, student }: StudentDetails
           </div>
 
           {/* Footer */}
-          <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex justify-end p-6 border-t" style={{ borderColor: 'var(--border)' }}>
             <Button variant="outline" onClick={onClose}>
               Cerrar
             </Button>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };

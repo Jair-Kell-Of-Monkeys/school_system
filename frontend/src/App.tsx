@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Landing } from '@/pages/Landing/Landing';
+import { NotFound } from '@/pages/NotFound/NotFound';
 import { Login } from '@/pages/Login/Login';
 import { Register } from '@/pages/Register/Register';
 import { VerifyEmail } from '@/pages/VerifyEmail/VerifyEmail';
@@ -189,17 +190,7 @@ function App() {
           <Route path="/home" element={<Navigate to="/" replace />} />
 
           {/* 404 */}
-          <Route
-            path="*"
-            element={
-              <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                  <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
-                  <p className="text-gray-600">Página no encontrada</p>
-                </div>
-              </div>
-            }
-          />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>
