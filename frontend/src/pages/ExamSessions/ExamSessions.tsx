@@ -21,6 +21,7 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
+  Users,
 } from 'lucide-react';
 
 const STATUS_VARIANT: Record<string, 'warning' | 'info' | 'success' | 'default'> = {
@@ -404,6 +405,8 @@ interface GradingPanelProps {
 
 const GradingPanel = ({ session, onClose }: GradingPanelProps) => {
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+  const isJefePanel = user?.role === ROLES.ADMIN || user?.role === ROLES.JEFE_SERVICIOS;
   const [scores, setScores] = useState<Record<string, string>>({});
   const [attendanceMap, setAttendanceMap] = useState<Record<string, boolean | null>>({});
   const [saving, setSaving] = useState<Record<string, boolean>>({});
@@ -411,6 +414,12 @@ const GradingPanel = ({ session, onClose }: GradingPanelProps) => {
   const { data: aspirants = [], refetch } = useQuery({
     queryKey: ['aspirants', session.id],
     queryFn: () => examsService.getAspirants(session.id),
+  });
+
+  const { data: capacityStatus = [] } = useQuery({
+    queryKey: ['capacity-status', session.id],
+    queryFn: () => examsService.getCapacityStatus(session.id),
+    enabled: isJefePanel && session.status === 'published',
   });
 
   const handleGrade = async (aspirant: ExamAspirant) => {
@@ -436,6 +445,7 @@ const GradingPanel = ({ session, onClose }: GradingPanelProps) => {
         exam_score: scoreVal,
       });
       queryClient.invalidateQueries({ queryKey: ['aspirants', session.id] });
+      queryClient.invalidateQueries({ queryKey: ['capacity-status', session.id] });
       refetch();
     } catch (err: unknown) {
       const msg =
@@ -480,6 +490,51 @@ const GradingPanel = ({ session, onClose }: GradingPanelProps) => {
         </div>
 
         <div className="p-6 space-y-6">
+          {/* Capacity status panel — visible only to jefe on published sessions */}
+          {isJefePanel && session.status === 'published' && capacityStatus.length > 0 && (
+            <div className="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Users size={16} className="text-gray-500 dark:text-gray-400" />
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                  Estado de Cupo por Programa
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {capacityStatus.map((cs) => {
+                  const pct = cs.max_capacity > 0 ? cs.accepted_count / cs.max_capacity : 0;
+                  const full = cs.available_spots === 0;
+                  return (
+                    <div
+                      key={cs.program_id}
+                      className={`rounded-lg p-3 border ${
+                        full
+                          ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700'
+                          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600'
+                      }`}
+                    >
+                      <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                        {cs.program_code}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 truncate">
+                        {cs.program_name}
+                      </p>
+                      <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5 mb-1">
+                        <div
+                          className={`h-1.5 rounded-full ${full ? 'bg-red-500' : 'bg-green-500'}`}
+                          style={{ width: `${Math.min(100, Math.round(pct * 100))}%` }}
+                        />
+                      </div>
+                      <p className={`text-xs font-medium ${full ? 'text-red-600 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}>
+                        {cs.accepted_count}/{cs.max_capacity} aceptados
+                        {full ? ' — Cupo lleno' : ` — ${cs.available_spots} disponibles`}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {aspirants.length === 0 && (
             <div className="text-center py-12">
               <ClipboardList className="mx-auto text-gray-400 mb-3" size={40} />

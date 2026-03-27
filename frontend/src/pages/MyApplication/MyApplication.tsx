@@ -3,14 +3,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card } from '@/components/atoms/Card/Card';
 import { Button } from '@/components/atoms/Button/Button';
 import { Badge } from '@/components/atoms/Badge/Badge';
-import { StatusTimeline } from '@/components/molecules/StatusTimeline/StatusTimeline';
 import { DocumentUploader } from '@/components/organisms/DocumentUploader/DocumentUploader';
 import { aspirantService } from '@/services/aspirant/aspirantService';
 import { paymentsService } from '@/services/payments/paymentsService';
 import { enrollmentsService } from '@/services/enrollments/enrollmentsService';
 import { credentialsService } from '@/services/credentials/credentialsService';
-import type { TimelineStep } from '@/components/molecules/StatusTimeline/StatusTimeline';
 import type { EnrollmentDetail } from '@/types';
+import type { MyApplication as MyApplicationType } from '@/types';
 import {
   FileText,
   Calendar,
@@ -25,9 +24,14 @@ import {
   GraduationCap,
   Award,
   Clock,
+  MapPin,
+  IdCard,
+  Mail,
+  Users,
 } from 'lucide-react';
 
-// Documentos requeridos para inscripción formal (exactamente 2)
+// ── Constants ─────────────────────────────────────────────────────────────────
+
 const ENROLLMENT_DOC_TYPES = [
   { key: 'numero_seguridad_social', label: 'Número de Seguridad Social' },
   { key: 'certificado_bachillerato', label: 'Certificado de Bachillerato Original' },
@@ -35,6 +39,248 @@ const ENROLLMENT_DOC_TYPES = [
 
 const PAYMENT_STATUSES = ['payment_pending', 'payment_submitted', 'payment_validated'];
 const ENROLLMENT_PAYMENT_STATUSES = ['payment_pending', 'payment_submitted', 'payment_validated'];
+
+// ── Process stepper ──────────────────────────────────────────────────────────
+
+const PROCESS_STEPS = [
+  'Registro',
+  'Pre-inscripción',
+  'Documentos',
+  'Pago',
+  'Examen',
+  'Inscripción',
+  'Credencial',
+];
+
+function getActiveStep(app: MyApplicationType, enrollment?: EnrollmentDetail): number {
+  if (enrollment) {
+    if (['enrolled', 'active'].includes(enrollment.status)) return 6;
+    if (enrollment.status === 'pending_docs') return 5;
+  }
+  const map: Record<string, number> = {
+    draft: 1,
+    submitted: 2,
+    under_review: 2,
+    documents_pending: 2,
+    payment_pending: 3,
+    payment_uploaded: 3,
+    payment_validated: 4,
+    exam_scheduled: 4,
+    accepted: 5,
+  };
+  return map[app.status] ?? 1;
+}
+
+interface StepperProps {
+  activeStep: number;
+  isRejected?: boolean;
+}
+
+const HorizontalStepper = ({ activeStep, isRejected = false }: StepperProps) => (
+  <div className="overflow-x-auto py-2">
+    <div className="flex items-start justify-start sm:justify-center min-w-max px-2">
+      {PROCESS_STEPS.map((label, idx) => {
+        const done = idx < activeStep;
+        const current = idx === activeStep;
+        const pending = idx > activeStep;
+
+        let circleClass = '';
+        let labelStyle: React.CSSProperties = {};
+        if (done) {
+          circleClass = 'bg-green-500 text-white';
+          labelStyle = { color: 'var(--color-success)' };
+        } else if (current && isRejected) {
+          circleClass = 'bg-red-500 text-white';
+          labelStyle = { color: 'var(--color-danger)' };
+        } else if (current) {
+          circleClass = 'bg-indigo-600 text-white shadow-md';
+          labelStyle = { color: '#6366f1' };
+        } else {
+          circleClass = '';
+          labelStyle = { color: 'var(--text-muted)' };
+        }
+
+        return (
+          <div key={label} className="flex items-start">
+            <div className="flex flex-col items-center gap-1.5">
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${circleClass} ${
+                  current && !isRejected ? 'ring-4 ring-indigo-100 dark:ring-indigo-900/40' : ''
+                } ${pending ? 'border-2' : ''}`}
+                style={
+                  pending
+                    ? { background: 'var(--bg-surface-3)', borderColor: 'var(--border)' }
+                    : undefined
+                }
+              >
+                {done ? (
+                  <CheckCircle size={15} />
+                ) : current && isRejected ? (
+                  <XCircle size={15} />
+                ) : (
+                  idx + 1
+                )}
+              </div>
+              <span
+                className="text-xs font-medium whitespace-nowrap text-center"
+                style={labelStyle}
+              >
+                {label}
+              </span>
+            </div>
+            {idx < PROCESS_STEPS.length - 1 && (
+              <div
+                className="h-0.5 w-8 sm:w-12 mx-1 mt-4 flex-shrink-0 rounded-full"
+                style={{ background: done ? '#4ade80' : 'var(--border)' }}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  </div>
+);
+
+// ── Score circle ─────────────────────────────────────────────────────────────
+
+const ScoreCircle = ({ score, passingScore = 70 }: { score: number; passingScore?: number }) => {
+  const passed = score >= passingScore;
+  const color = passed ? 'var(--color-success)' : 'var(--color-danger)';
+  const bg = passed ? 'var(--color-success-bg)' : 'var(--color-danger-bg)';
+  const border = passed ? 'var(--color-success-border)' : 'var(--color-danger-border)';
+
+  return (
+    <div className="flex items-center gap-5">
+      <div
+        className="w-24 h-24 rounded-full flex flex-col items-center justify-center flex-shrink-0 border-4"
+        style={{ background: bg, borderColor: border }}
+      >
+        <span className="text-3xl font-extrabold" style={{ color }}>
+          {score}
+        </span>
+        <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+          / 100
+        </span>
+      </div>
+      <div>
+        <p className="font-semibold text-base" style={{ color }}>
+          {passed ? '¡Calificación aprobatoria!' : 'Calificación no aprobatoria'}
+        </p>
+        <p className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+          Mínimo requerido: {passingScore} puntos
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// ── Alert callout ─────────────────────────────────────────────────────────────
+
+type AlertColor = 'info' | 'success' | 'warning' | 'danger';
+
+const alertStyles: Record<AlertColor, { bg: string; border: string; icon: string }> = {
+  info:    { bg: 'var(--color-info-bg)',    border: 'var(--color-info-border)',    icon: 'var(--color-info)' },
+  success: { bg: 'var(--color-success-bg)', border: 'var(--color-success-border)', icon: 'var(--color-success)' },
+  warning: { bg: 'var(--color-warning-bg)', border: 'var(--color-warning-border)', icon: 'var(--color-warning)' },
+  danger:  { bg: 'var(--color-danger-bg)',  border: 'var(--color-danger-border)',  icon: 'var(--color-danger)' },
+};
+
+const Callout = ({
+  color,
+  icon,
+  title,
+  children,
+}: {
+  color: AlertColor;
+  icon: React.ReactNode;
+  title: string;
+  children: React.ReactNode;
+}) => {
+  const s = alertStyles[color];
+  return (
+    <div
+      className="rounded-xl p-4 flex items-start gap-3 border"
+      style={{ background: s.bg, borderColor: s.border }}
+    >
+      <div className="flex-shrink-0 mt-0.5" style={{ color: s.icon }}>
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-sm" style={{ color: s.icon }}>
+          {title}
+        </p>
+        <div className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Section title helper ──────────────────────────────────────────────────────
+
+const SectionTitle = ({ icon, title }: { icon: React.ReactNode; title: string }) => (
+  <div className="flex items-center gap-2.5 mb-5">
+    <div
+      className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+      style={{ background: 'var(--color-info-bg)', color: 'var(--color-info)' }}
+    >
+      {icon}
+    </div>
+    <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+      {title}
+    </h2>
+  </div>
+);
+
+// ── InfoCard helper ───────────────────────────────────────────────────────────
+
+const InfoCard = ({
+  icon,
+  label,
+  value,
+  mono = false,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+  mono?: boolean;
+}) => (
+  <div
+    className="rounded-xl p-4 border flex items-start gap-3"
+    style={{ background: 'var(--bg-surface-2)', borderColor: 'var(--border)' }}
+  >
+    <div
+      className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+      style={{ background: 'var(--bg-surface-3)', color: 'var(--text-muted)' }}
+    >
+      {icon}
+    </div>
+    <div className="min-w-0">
+      <p className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+        {label}
+      </p>
+      <p
+        className={`text-sm font-semibold mt-0.5 break-all ${mono ? 'font-mono tracking-wider' : ''}`}
+        style={{ color: 'var(--text-primary)' }}
+      >
+        {value}
+      </p>
+    </div>
+  </div>
+);
+
+// ── Status badge variant ──────────────────────────────────────────────────────
+
+function statusBadgeVariant(status: string): 'success' | 'danger' | 'info' | 'warning' {
+  if (status === 'accepted' || status === 'enrolled' || status === 'active') return 'success';
+  if (status === 'rejected') return 'danger';
+  if (status === 'documents_rejected') return 'danger';
+  if (status === 'draft') return 'warning';
+  return 'info';
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export const MyApplication = () => {
   const queryClient = useQueryClient();
@@ -70,14 +316,12 @@ export const MyApplication = () => {
     queryFn: aspirantService.getActivePeriods,
   });
 
-  // Solo carga el pago cuando la solicitud está en etapa de pago
   const { data: payment, isLoading: isPaymentLoading } = useQuery({
     queryKey: ['my-payment', application?.id],
     queryFn: () => paymentsService.getPaymentForPreEnrollment(application!.id),
     enabled: !!application && PAYMENT_STATUSES.includes(application.status),
   });
 
-  // Carga la inscripción formal cuando la solicitud fue aceptada
   const { data: myEnrollments } = useQuery({
     queryKey: ['my-enrollment'],
     queryFn: enrollmentsService.getMyEnrollments,
@@ -85,14 +329,12 @@ export const MyApplication = () => {
   });
   const enrollment: EnrollmentDetail | undefined = myEnrollments?.[0];
 
-  // Pago de inscripción (cuando enrollment está en pending_payment)
   const { data: enrollmentPayment, isLoading: isEnrollPaymentLoading } = useQuery({
     queryKey: ['enrollment-payment', application?.id],
     queryFn: () => paymentsService.getPaymentForPreEnrollment(application!.id),
     enabled: !!enrollment && ENROLLMENT_PAYMENT_STATUSES.includes(enrollment.status),
   });
 
-  // Credencial — solo cuando la inscripción está completada (enrolled)
   const { data: myCredentialRequests = [] } = useQuery({
     queryKey: ['my-credential-requests'],
     queryFn: credentialsService.getMyRequests,
@@ -126,9 +368,7 @@ export const MyApplication = () => {
     mutationFn: () => aspirantService.submitApplication(application!.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-application'] });
-      alert(
-        'Solicitud enviada correctamente. El equipo de admisiones revisará tus documentos.'
-      );
+      alert('Solicitud enviada correctamente. El equipo de admisiones revisará tus documentos.');
     },
   });
 
@@ -332,81 +572,6 @@ export const MyApplication = () => {
     uploadEnrollReceiptMutation.mutate(data);
   };
 
-  // ── Timeline ─────────────────────────────────────────────────────────────
-
-  const getTimelineSteps = (): TimelineStep[] => {
-    if (!application) return [];
-
-    const appStatus = application.status;
-    const docs = application.documents ?? [];
-
-    const allDocsApproved = docs.length > 0 && docs.every((d) => d.status === 'approved');
-    const anyDocRejected  = docs.some((d) => d.status === 'rejected');
-
-    const inReview  = ['submitted', 'under_review', 'documents_rejected'].includes(appStatus);
-    const pastReview = [
-      'documents_approved',
-      'payment_pending',
-      'payment_submitted',
-      'payment_validated',
-      'exam_scheduled',
-      'exam_completed',
-      'accepted',
-      'rejected',
-    ].includes(appStatus);
-
-    let reviewStatus: TimelineStep['status'];
-    if (pastReview) {
-      reviewStatus = 'completed';
-    } else if (inReview) {
-      if (allDocsApproved)     reviewStatus = 'completed';
-      else if (anyDocRejected) reviewStatus = 'warning';
-      else                     reviewStatus = 'processing';
-    } else {
-      reviewStatus = 'pending';
-    }
-
-    const docsApprovedStatus: TimelineStep['status'] =
-      allDocsApproved || pastReview ? 'completed' : 'pending';
-
-    let paymentStatus: TimelineStep['status'];
-    if (
-      ['payment_validated', 'exam_scheduled', 'exam_completed', 'accepted', 'rejected'].includes(
-        appStatus
-      )
-    ) {
-      paymentStatus = 'completed';
-    } else if (PAYMENT_STATUSES.includes(appStatus)) {
-      paymentStatus = 'current';
-    } else {
-      paymentStatus = 'pending';
-    }
-
-    let examStatus: TimelineStep['status'];
-    if (['exam_completed', 'accepted', 'rejected'].includes(appStatus)) {
-      examStatus = 'completed';
-    } else if (appStatus === 'exam_scheduled') {
-      examStatus = 'current';
-    } else {
-      examStatus = 'pending';
-    }
-
-    let resultStatus: TimelineStep['status'];
-    if (appStatus === 'accepted')      resultStatus = 'completed';
-    else if (appStatus === 'rejected') resultStatus = 'rejected';
-    else                               resultStatus = 'pending';
-
-    return [
-      { id: 'draft',              label: 'Borrador',             status: 'completed' },
-      { id: 'submitted',          label: 'Enviado',              status: application.submitted_at ? 'completed' : 'pending' },
-      { id: 'under_review',       label: 'En Revisión',          status: reviewStatus },
-      { id: 'documents_approved', label: 'Documentos Aprobados', status: docsApprovedStatus },
-      { id: 'payment',            label: 'Pago Validado',        status: paymentStatus },
-      { id: 'exam',               label: 'Examen',               status: examStatus },
-      { id: 'result',             label: 'Resultado',            status: resultStatus },
-    ];
-  };
-
   const canSubmitApplication = () => {
     if (!application) return false;
     if (application.status !== 'draft') return false;
@@ -414,65 +579,72 @@ export const MyApplication = () => {
     return true;
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // ── Loading ───────────────────────────────────────────────────────────────
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div className="flex justify-center items-center min-h-64">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
       </div>
     );
   }
 
+  // ── No application ─────────────────────────────────────────────────────────
+
   if (!application) {
     return (
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="text-center">
-          <FileText className="mx-auto text-primary-600 mb-4" size={64} />
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Solicitud de Admisión</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
+      <div className="w-full space-y-6">
+        <div
+          className="rounded-2xl p-8 text-center"
+          style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
+        >
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+            style={{ background: 'var(--color-info-bg)' }}
+          >
+            <FileText size={32} style={{ color: 'var(--color-info)' }} />
+          </div>
+          <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
+            Solicitud de Admisión
+          </h1>
+          <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
             Aún no tienes una solicitud activa. Crea una para comenzar tu proceso de admisión.
           </p>
-        </div>
 
-        {!showCreateForm ? (
-          <Card className="text-center">
+          {!showCreateForm ? (
             <Button size="lg" onClick={() => setShowCreateForm(true)}>
               Crear Nueva Solicitud
             </Button>
-          </Card>
-        ) : (
-          <Card>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              Nueva Solicitud de Admisión
-            </h2>
-            <div className="space-y-4">
+          ) : (
+            <div className="text-left space-y-4 mt-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Programa Académico
+                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                  Programa Académico <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={formData.program}
                   onChange={(e) => setFormData({ ...formData, program: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  style={{ borderColor: 'var(--border)', background: 'var(--bg-surface-2)', color: 'var(--text-primary)' }}
                 >
                   <option value="">Selecciona un programa...</option>
                   {programs.map((program: any) => (
                     <option key={program.id} value={program.id}>
-                      {program.code} - {program.name}
+                      {program.code} — {program.name}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Periodo
+                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                  Periodo <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={formData.period}
                   onChange={(e) => setFormData({ ...formData, period: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  style={{ borderColor: 'var(--border)', background: 'var(--bg-surface-2)', color: 'var(--text-primary)' }}
                 >
                   <option value="">Selecciona un periodo...</option>
                   {periods.map((period: any) => (
@@ -483,7 +655,7 @@ export const MyApplication = () => {
                 </select>
               </div>
 
-              <div className="flex space-x-3">
+              <div className="flex gap-3 pt-2">
                 <Button
                   onClick={() => createMutation.mutate()}
                   isLoading={createMutation.isPending}
@@ -496,189 +668,140 @@ export const MyApplication = () => {
                 </Button>
               </div>
             </div>
-          </Card>
-        )}
+          )}
+        </div>
       </div>
     );
   }
 
   // ── Vista principal ───────────────────────────────────────────────────────
 
-  // ¿Debe mostrarse la sección de pago?
   const showPaymentSection = PAYMENT_STATUSES.includes(application.status);
-  // ¿El formulario de carga debe aparecer?
-  // - Pago rechazado (siempre permitir reintentar), o
-  // - Pago pendiente pero comprobante aún no enviado (application todavía en payment_pending)
   const showUploadForm =
     payment?.status === 'rejected' ||
     (payment?.status === 'pending' && application.status === 'payment_pending');
+  const isRejected = application.status === 'rejected';
+  const activeStep = getActiveStep(application, enrollment);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Mi Solicitud de Admisión</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
-          Programa: {application.program?.code} - {application.program?.name}
-        </p>
+    <div className="space-y-5 w-full">
+      {/* ── Header ──────────────────────────────────────────────────────── */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide mb-1" style={{ color: 'var(--text-muted)' }}>
+            Mi Solicitud de Admisión
+          </p>
+          <h1 className="text-2xl sm:text-3xl font-bold leading-tight" style={{ color: 'var(--text-primary)' }}>
+            {application.program?.name}
+          </h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
+            {application.program?.code} · {application.period?.name}
+          </p>
+        </div>
+        <Badge variant={statusBadgeVariant(application.status)}>
+          {application.status_display}
+        </Badge>
       </div>
 
-      {/* Estado actual */}
+      {/* ── Barra de progreso ────────────────────────────────────────────── */}
       <Card>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Estado Actual</h2>
-          <Badge
-            variant={
-              application.status === 'accepted'
-                ? 'success'
-                : application.status === 'rejected'
-                ? 'danger'
-                : 'info'
-            }
-          >
-            {application.status_display}
-          </Badge>
-        </div>
-        <StatusTimeline steps={getTimelineSteps()} />
+        <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--text-muted)' }}>
+          Progreso del proceso
+        </p>
+        <HorizontalStepper activeStep={activeStep} isRejected={isRejected} />
       </Card>
 
-      {/* Alertas importantes */}
-      {application.status === 'documents_rejected' && (
-        <Card className="border-l-4 border-red-500 bg-red-50">
-          <div className="flex items-start">
-            <AlertCircle className="text-red-600 mr-3 mt-1 flex-shrink-0" size={24} />
-            <div>
-              <h3 className="font-semibold text-red-900">Documentos Rechazados</h3>
-              <p className="text-sm text-red-700 mt-1">
-                Algunos de tus documentos fueron rechazados. Por favor revísalos y vuelve a
-                subirlos.
-              </p>
-              {application.notes && (
-                <p className="text-sm text-red-700 mt-2">
-                  <span className="font-medium">Notas:</span> {application.notes}
-                </p>
-              )}
-            </div>
-          </div>
-        </Card>
+      {/* ── Alertas ─────────────────────────────────────────────────────── */}
+      {application.status === 'draft' && (
+        <Callout color="warning" icon={<AlertCircle size={18} />} title="Solicitud en borrador">
+          Sube todos los documentos requeridos y luego envía tu solicitud para comenzar el proceso de revisión.
+        </Callout>
       )}
 
-      {application.status === 'draft' && (
-        <Card className="border-l-4 border-yellow-500 bg-yellow-50">
-          <div className="flex items-start">
-            <AlertCircle className="text-yellow-600 mr-3 mt-1 flex-shrink-0" size={24} />
-            <div>
-              <h3 className="font-semibold text-yellow-900">Solicitud en Borrador</h3>
-              <p className="text-sm text-yellow-700 mt-1">
-                Sube todos los documentos requeridos y envía tu solicitud para comenzar el
-                proceso de revisión.
-              </p>
-            </div>
-          </div>
-        </Card>
+      {application.status === 'documents_rejected' && (
+        <Callout color="danger" icon={<XCircle size={18} />} title="Documentos rechazados">
+          <p>Algunos documentos fueron rechazados. Revísalos en la sección de documentos y vuelve a subirlos.</p>
+          {application.notes && (
+            <p className="mt-1 font-medium">{application.notes}</p>
+          )}
+        </Callout>
       )}
 
       {application.status === 'exam_scheduled' && (
-        <Card className="border-l-4 border-blue-500 bg-blue-50">
-          <div className="flex items-start">
-            <CheckCircle className="text-blue-600 mr-3 mt-1 flex-shrink-0" size={24} />
-            <div>
-              <h3 className="font-semibold text-blue-900">¡Examen Asignado!</h3>
-              <p className="text-sm text-blue-700 mt-1">
-                Tu fecha de examen ha sido confirmada. Consulta los detalles a continuación y
-                preséntate con identificación oficial.
-              </p>
-            </div>
-          </div>
-        </Card>
+        <Callout color="info" icon={<Calendar size={18} />} title="¡Examen asignado!">
+          Tu fecha de examen ha sido confirmada. Consulta los detalles a continuación y preséntate con identificación oficial.
+        </Callout>
       )}
 
-      {/* ── Sección de Pago ─────────────────────────────────────────────── */}
+      {/* ── Pago de examen ───────────────────────────────────────────────── */}
       {showPaymentSection && (
         <Card>
-          <div className="flex items-center mb-5">
-            <CreditCard className="text-primary-600 mr-3 flex-shrink-0" size={24} />
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Pago de Examen de Admisión</h2>
-          </div>
+          <SectionTitle icon={<CreditCard size={17} />} title="Pago de Examen de Admisión" />
 
           {/* Monto */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-5">
-            <p className="text-blue-900 font-medium">$500.00 MXN</p>
-            <p className="text-sm text-blue-700 mt-0.5">Concepto: Examen de Admisión</p>
+          <div
+            className="rounded-xl p-4 mb-5 border"
+            style={{ background: 'var(--color-info-bg)', borderColor: 'var(--color-info-border)' }}
+          >
+            <p className="font-bold text-lg" style={{ color: 'var(--color-info)' }}>$500.00 MXN</p>
+            <p className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>Concepto: Examen de Admisión</p>
           </div>
 
           {isPaymentLoading && (
-            <p className="text-sm text-gray-500">Cargando información de pago...</p>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Cargando información de pago...</p>
           )}
 
-          {/* Sin pago creado */}
           {!isPaymentLoading && !payment && (
             <div className="text-center py-2">
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Genera tu ficha para obtener el número de referencia bancaria y realizar el
-                depósito.
+              <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
+                Genera tu ficha para obtener el número de referencia bancaria y realizar el depósito.
               </p>
-              <Button
-                onClick={() => createPaymentMutation.mutate()}
-                isLoading={createPaymentMutation.isPending}
-              >
+              <Button onClick={() => createPaymentMutation.mutate()} isLoading={createPaymentMutation.isPending}>
                 Generar Ficha de Pago
               </Button>
             </div>
           )}
 
-          {/* Pago existe */}
           {!isPaymentLoading && payment && (
             <div className="space-y-4">
-
-              {/* Aviso de rechazo */}
               {payment.status === 'rejected' && (
-                <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <XCircle className="text-red-600 flex-shrink-0 mt-0.5" size={18} />
-                  <div>
-                    <p className="font-medium text-red-900">Comprobante rechazado</p>
-                    {payment.validation_notes && (
-                      <p className="text-sm text-red-700 mt-1">{payment.validation_notes}</p>
-                    )}
-                    <p className="text-sm text-red-600 mt-1">
-                      Por favor sube un nuevo comprobante.
-                    </p>
-                  </div>
-                </div>
+                <Callout color="danger" icon={<XCircle size={17} />} title="Comprobante rechazado">
+                  {payment.validation_notes && <p>{payment.validation_notes}</p>}
+                  <p className="mt-1">Por favor sube un nuevo comprobante.</p>
+                </Callout>
               )}
 
               {/* Número de referencia */}
-              <div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-3">
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Número de referencia</p>
-                <p className="text-lg font-mono font-bold text-gray-900 dark:text-gray-100 tracking-wider">
+              <div
+                className="rounded-xl p-4 border"
+                style={{ background: 'var(--bg-surface-2)', borderColor: 'var(--border)' }}
+              >
+                <p className="text-xs font-medium uppercase tracking-wide mb-1" style={{ color: 'var(--text-muted)' }}>
+                  Número de referencia
+                </p>
+                <p className="text-xl font-mono font-bold tracking-widest" style={{ color: 'var(--text-primary)' }}>
                   {payment.receipt_number}
                 </p>
               </div>
 
-              {/* Descargar ficha */}
-              <Button
-                variant="outline"
-                onClick={handleDownloadSlip}
-                isLoading={isDownloadingSlip}
-                disabled={isDownloadingSlip}
-              >
-                <Download size={18} className="mr-2" />
+              <Button variant="outline" onClick={handleDownloadSlip} isLoading={isDownloadingSlip} disabled={isDownloadingSlip}>
+                <Download size={16} className="mr-2" />
                 Descargar Ficha de Pago
               </Button>
 
               {/* Formulario para subir comprobante */}
               {showUploadForm && (
-                <div className="border-t pt-4 space-y-3">
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100">
-                    {payment.status === 'rejected'
-                      ? 'Subir nuevo comprobante'
-                      : 'Subir comprobante de pago'}
+                <div
+                  className="rounded-xl p-4 border space-y-3 mt-2"
+                  style={{ background: 'var(--bg-surface-2)', borderColor: 'var(--border)' }}
+                >
+                  <h4 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
+                    {payment.status === 'rejected' ? 'Subir nuevo comprobante' : 'Subir comprobante de pago'}
                   </h4>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Fecha en que realizaste el pago{' '}
-                      <span className="text-red-500">*</span>
+                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                      Fecha en que realizaste el pago <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="date"
@@ -686,66 +809,44 @@ export const MyApplication = () => {
                       onChange={(e) => setPaymentDate(e.target.value)}
                       min={payment.created_at.slice(0, 10)}
                       max={new Date().toISOString().split('T')[0]}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)', color: 'var(--text-primary)' }}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Archivo del comprobante{' '}
-                      <span className="text-red-500">*</span>
+                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                      Archivo del comprobante <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="file"
                       accept=".pdf,.jpg,.jpeg,.png"
                       onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)}
-                      className="w-full text-sm text-gray-600 dark:text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 cursor-pointer"
+                      className="w-full text-sm text-gray-600 dark:text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
                     />
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">PDF, JPG o PNG — máx. 5 MB</p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>PDF, JPG o PNG — máx. 5 MB</p>
                   </div>
 
-                  <Button
-                    onClick={handleUploadReceipt}
-                    isLoading={uploadReceiptMutation.isPending}
-                    disabled={!receiptFile || !paymentDate}
-                  >
-                    <Upload size={18} className="mr-2" />
+                  <Button onClick={handleUploadReceipt} isLoading={uploadReceiptMutation.isPending} disabled={!receiptFile || !paymentDate}>
+                    <Upload size={16} className="mr-2" />
                     Enviar Comprobante
                   </Button>
                 </div>
               )}
 
-              {/* Comprobante en revisión */}
               {payment.status === 'pending' && application.status === 'payment_submitted' && (
-                <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg mt-1">
-                  <CheckCircle className="text-yellow-600 flex-shrink-0 mt-0.5" size={16} />
-                  <p className="text-sm text-yellow-800">
-                    Tu comprobante fue enviado y está siendo revisado por el equipo de
-                    finanzas.
-                  </p>
-                </div>
+                <Callout color="warning" icon={<Clock size={17} />} title="Comprobante en revisión">
+                  Tu comprobante fue enviado y está siendo revisado por el equipo de finanzas.
+                </Callout>
               )}
 
-              {/* Pago validado */}
               {payment.status === 'validated' && (
                 <div className="space-y-3">
-                  <div className="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <CheckCircle className="text-green-600 flex-shrink-0 mt-0.5" size={18} />
-                    <div>
-                      <p className="font-medium text-green-900">Pago validado</p>
-                      <p className="text-sm text-green-700 mt-0.5">
-                        Tu pago fue confirmado por el equipo de finanzas. Ya puedes descargar
-                        tu recibo oficial.
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="success"
-                    onClick={handleDownloadReceipt}
-                    isLoading={isDownloadingReceipt}
-                    disabled={isDownloadingReceipt}
-                  >
-                    <Download size={18} className="mr-2" />
+                  <Callout color="success" icon={<CheckCircle size={17} />} title="Pago validado">
+                    Tu pago fue confirmado por el equipo de finanzas. Ya puedes descargar tu recibo oficial.
+                  </Callout>
+                  <Button variant="success" onClick={handleDownloadReceipt} isLoading={isDownloadingReceipt} disabled={isDownloadingReceipt}>
+                    <Download size={16} className="mr-2" />
                     Descargar Recibo Oficial
                   </Button>
                 </div>
@@ -755,284 +856,327 @@ export const MyApplication = () => {
         </Card>
       )}
 
-      {/* Información del examen */}
+      {/* ── Examen asignado ──────────────────────────────────────────────── */}
       {application.exam_date && (
-        <Card>
-          <div className="flex items-start mb-4">
-            <Calendar className="text-primary-600 mr-3 mt-1" size={24} />
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Examen de Admisión Programado
-              </h3>
-              <div className="mt-2 space-y-1">
-                <p className="text-gray-700 dark:text-gray-300">
-                  <span className="font-medium">Fecha:</span>{' '}
-                  {new Date(application.exam_date).toLocaleDateString('es-MX', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </p>
-                <p className="text-gray-700 dark:text-gray-300">
-                  <span className="font-medium">Modalidad:</span>{' '}
-                  {application.exam_mode === 'presencial' ? 'Presencial' : 'En Línea'}
-                </p>
-                {application.exam_location && (
-                  <p className="text-gray-700 dark:text-gray-300">
-                    <span className="font-medium">Ubicación:</span>{' '}
-                    {application.exam_location}
-                  </p>
-                )}
-              </div>
+        <div
+          className="rounded-2xl p-5 border"
+          style={{
+            background: 'linear-gradient(135deg, var(--color-info-bg) 0%, var(--bg-surface) 100%)',
+            borderColor: 'var(--color-info-border)',
+          }}
+        >
+          <div className="flex items-center gap-2.5 mb-4">
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: 'var(--color-info)', color: '#fff' }}
+            >
+              <Calendar size={18} />
             </div>
+            <h3 className="font-bold text-base" style={{ color: 'var(--text-primary)' }}>
+              Examen de Admisión Programado
+            </h3>
           </div>
-        </Card>
-      )}
 
-      {/* Calificación del examen */}
-      {application.exam_score !== null && (
-        <Card className="border-l-4 border-green-500">
-          <div className="flex items-start">
-            <CheckCircle className="text-green-600 mr-3 mt-1" size={24} />
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Calificación del Examen</h3>
-              <p className="text-4xl font-bold text-green-600 mt-2">
-                {application.exam_score}/100
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div
+              className="rounded-xl p-3 border"
+              style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}
+            >
+              <p className="text-xs font-medium uppercase tracking-wide mb-1" style={{ color: 'var(--text-muted)' }}>
+                Fecha y hora
+              </p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                {new Date(application.exam_date).toLocaleDateString('es-MX', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                {new Date(application.exam_date).toLocaleTimeString('es-MX', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
               </p>
             </div>
+
+            <div
+              className="rounded-xl p-3 border"
+              style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}
+            >
+              <p className="text-xs font-medium uppercase tracking-wide mb-1" style={{ color: 'var(--text-muted)' }}>
+                Modalidad
+              </p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                {application.exam_mode === 'presencial' ? '🏫 Presencial' : '💻 En Línea'}
+              </p>
+            </div>
+
+            {application.exam_location && (
+              <div
+                className="rounded-xl p-3 border"
+                style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}
+              >
+                <p className="text-xs font-medium uppercase tracking-wide mb-1" style={{ color: 'var(--text-muted)' }}>
+                  Ubicación
+                </p>
+                <p className="text-sm font-semibold flex items-start gap-1" style={{ color: 'var(--text-primary)' }}>
+                  <MapPin size={13} className="mt-0.5 flex-shrink-0" />
+                  {application.exam_location}
+                </p>
+              </div>
+            )}
           </div>
+
+          <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
+            Preséntate con al menos 15 min de anticipación con identificación oficial vigente.
+          </p>
+        </div>
+      )}
+
+      {/* ── Calificación del examen ──────────────────────────────────────── */}
+      {application.exam_score !== null && (
+        <Card>
+          <SectionTitle icon={<Award size={17} />} title="Resultado del Examen" />
+          <ScoreCircle score={application.exam_score} />
         </Card>
       )}
 
-      {/* Resultado final */}
-      {application.status === 'accepted' && (
-        <Card className="border-l-4 border-green-500 bg-green-50">
-          <div className="text-center py-6">
-            <CheckCircle className="mx-auto text-green-600 mb-4" size={64} />
-            <h2 className="text-2xl font-bold text-green-900">
-              ¡Felicidades! Has sido aceptado
-            </h2>
-            <p className="text-green-700 mt-2">Bienvenido a {application.program?.name}</p>
-          </div>
-        </Card>
+      {/* ── Aceptado ────────────────────────────────────────────────────── */}
+      {application.status === 'accepted' && !enrollment && (
+        <Callout color="success" icon={<CheckCircle size={18} />} title="¡Felicidades, fuiste aceptado!">
+          Has superado el proceso de admisión a <strong>{application.program?.name}</strong>. El equipo de Servicios Escolares está procesando tu inscripción formal.
+        </Callout>
       )}
 
-      {/* ── Sección de Inscripción Formal ───────────────────────────────── */}
+      {/* ── Rechazado ────────────────────────────────────────────────────── */}
+      {isRejected && (
+        <div
+          className="rounded-2xl p-8 border text-center"
+          style={{ background: 'var(--color-danger-bg)', borderColor: 'var(--color-danger-border)' }}
+        >
+          <AlertCircle size={48} className="mx-auto mb-3" style={{ color: 'var(--color-danger)' }} />
+          <h2 className="text-xl font-bold mb-1" style={{ color: 'var(--color-danger)' }}>
+            Solicitud No Aceptada
+          </h2>
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+            Lamentamos informarte que tu solicitud no fue aceptada en este proceso de admisión.
+          </p>
+          {application.notes && (
+            <p className="text-sm mt-3 max-w-md mx-auto" style={{ color: 'var(--text-secondary)' }}>
+              {application.notes}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ── Inscripción formal ───────────────────────────────────────────── */}
       {application.status === 'accepted' && enrollment && (
         <>
-          {/* Inscripción completada — pantalla de bienvenida institucional */}
+          {/* Inscripción completada */}
           {enrollment.status === 'enrolled' && (
-            <div className="space-y-0 rounded-xl overflow-hidden shadow-lg border border-green-300">
-              {/* Banner superior */}
-              <div className="bg-gradient-to-r from-green-700 to-green-500 px-8 py-8 text-white text-center">
-                <GraduationCap className="mx-auto mb-3" size={56} />
-                <h2 className="text-3xl font-bold tracking-tight">
+            <div
+              className="rounded-2xl overflow-hidden border"
+              style={{ borderColor: 'var(--color-success-border)' }}
+            >
+              {/* Banner */}
+              <div
+                className="px-6 py-8 text-center"
+                style={{ background: 'linear-gradient(135deg, #065f46 0%, #059669 100%)' }}
+              >
+                <GraduationCap size={52} className="mx-auto mb-3 text-white opacity-90" />
+                <h2 className="text-2xl font-bold text-white tracking-tight">
                   ¡Bienvenido al Sistema Universitario!
                 </h2>
-                <p className="mt-2 text-green-100 text-lg">
-                  Tu inscripción ha sido completada exitosamente.
+                <p className="mt-1.5 text-green-100 text-sm">
+                  Tu inscripción ha sido completada exitosamente
                 </p>
-                <p className="mt-1 text-green-200 text-sm">
-                  {enrollment.period?.name ?? ''} — {enrollment.program?.name ?? application.program?.name}
+                <p className="mt-0.5 text-green-200 text-xs">
+                  {enrollment.period_name} — {enrollment.program_name ?? application.program?.name}
                 </p>
               </div>
 
-              {/* Tarjeta de credenciales */}
-              <div className="bg-white dark:bg-gray-800 px-8 py-6">
-                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">
+              {/* Credenciales institucionales */}
+              <div className="p-6" style={{ background: 'var(--bg-surface)' }}>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: 'var(--text-muted)' }}>
                   Credenciales institucionales
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Matrícula</p>
-                    <p className="text-xl font-mono font-bold text-gray-900 dark:text-gray-100 tracking-widest">
-                      {enrollment.matricula}
-                    </p>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Correo institucional</p>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 break-all">
-                      {enrollment.student?.institutional_email ?? `${enrollment.matricula}@universidad.edu.mx`}
-                    </p>
-                  </div>
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <InfoCard
+                    icon={<IdCard size={16} />}
+                    label="Matrícula"
+                    value={enrollment.matricula}
+                    mono
+                  />
+                  <InfoCard
+                    icon={<Mail size={16} />}
+                    label="Correo institucional"
+                    value={
+                      enrollment.student?.institutional_email ??
+                      `${enrollment.matricula}@universidad.edu.mx`
+                    }
+                  />
                   {enrollment.group && (
-                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Grupo</p>
-                      <p className="font-semibold text-gray-900 dark:text-gray-100">{enrollment.group}</p>
-                    </div>
+                    <InfoCard icon={<Users size={16} />} label="Grupo" value={enrollment.group} />
                   )}
                   {enrollment.schedule && (
-                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Horario</p>
-                      <p className="font-semibold text-gray-900 dark:text-gray-100">{enrollment.schedule}</p>
-                    </div>
+                    <InfoCard icon={<Calendar size={16} />} label="Horario" value={enrollment.schedule} />
                   )}
                 </div>
 
-                <div className="mt-6 flex flex-col sm:flex-row items-center gap-3">
+                <div className="mt-5 flex flex-col sm:flex-row gap-3">
                   <Button
                     variant="success"
                     onClick={() => handleDownloadComprobante(enrollment.id)}
                     isLoading={isDownloadingComprobante}
                     disabled={isDownloadingComprobante}
                   >
-                    <Download size={18} className="mr-2" />
+                    <Download size={16} className="mr-2" />
                     Descargar Comprobante de Inscripción
                   </Button>
                 </div>
-
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-4">
-                  Conserva tu comprobante. Para activar tu correo institucional, acude a Servicios Escolares con identificación oficial.
+                <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
+                  Para activar tu correo institucional, acude a Servicios Escolares con identificación oficial.
                 </p>
               </div>
 
-              {/* ── Sección Credencial Estudiantil ─────────────────────── */}
-              <div className="bg-blue-50 border-t border-blue-100 px-8 py-6">
+              {/* Credencial estudiantil */}
+              <div
+                className="px-6 py-5 border-t"
+                style={{ background: 'var(--bg-surface-2)', borderColor: 'var(--border)' }}
+              >
                 <div className="flex items-center gap-2 mb-4">
-                  <Award className="text-blue-600" size={22} />
-                  <h3 className="text-base font-semibold text-blue-900">
+                  <Award size={18} style={{ color: 'var(--color-info)' }} />
+                  <h3 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
                     Credencial Estudiantil
                   </h3>
                 </div>
 
-                {/* Sin convocatoria activa y sin solicitud */}
                 {!myCredentialRequest && !activeConvocatoria && (
-                  <div className="flex items-start gap-3 p-3 bg-white border border-blue-200 rounded-lg">
-                    <Clock className="text-blue-400 flex-shrink-0 mt-0.5" size={16} />
-                    <p className="text-sm text-blue-700">
-                      No hay una convocatoria de credencialización activa en este momento.
-                      Te notificaremos cuando se abra el proceso.
-                    </p>
-                  </div>
+                  <Callout color="info" icon={<Clock size={16} />} title="Sin convocatoria activa">
+                    No hay una convocatoria de credencialización abierta en este momento. Te notificaremos cuando se inicie el proceso.
+                  </Callout>
                 )}
 
-                {/* Hay convocatoria activa y el alumno no ha solicitado */}
                 {!myCredentialRequest && activeConvocatoria && (
                   <div className="space-y-4">
-                    <div className="bg-white border border-blue-200 rounded-lg p-4">
-                      <p className="font-medium text-gray-900 dark:text-gray-100 mb-1">
+                    <div
+                      className="rounded-xl p-4 border"
+                      style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}
+                    >
+                      <p className="font-semibold text-sm mb-1" style={{ color: 'var(--text-primary)' }}>
                         {activeConvocatoria.title}
                       </p>
                       {activeConvocatoria.description && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
                           {activeConvocatoria.description}
                         </p>
                       )}
                       {activeConvocatoria.requirements && (
-                        <div className="text-xs text-gray-500 dark:text-gray-400 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded p-2">
-                          <span className="font-medium">Requisitos de fotografía:</span>{' '}
+                        <div
+                          className="text-xs rounded-lg p-2 border"
+                          style={{
+                            background: 'var(--color-warning-bg)',
+                            borderColor: 'var(--color-warning-border)',
+                            color: 'var(--color-warning)',
+                          }}
+                        >
+                          <span className="font-semibold">Requisitos de fotografía:</span>{' '}
                           {activeConvocatoria.requirements}
                         </div>
                       )}
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                      <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
                         Cierre: {activeConvocatoria.fecha_fin}
                       </p>
                     </div>
 
-                    <div className="bg-white border border-blue-200 rounded-lg p-4 space-y-1">
-                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                    {/* Verificación de datos */}
+                    <div
+                      className="rounded-xl p-4 border text-sm space-y-1"
+                      style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}
+                    >
+                      <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>
                         Verifica tus datos antes de solicitar
                       </p>
-                      <p className="text-sm text-gray-700 dark:text-gray-300">
-                        <span className="font-medium">Nombre:</span>{' '}
-                        {enrollment.student?.first_name} {enrollment.student?.last_name}
-                      </p>
-                      <p className="text-sm text-gray-700 dark:text-gray-300">
-                        <span className="font-medium">Matrícula:</span> {enrollment.matricula}
-                      </p>
-                      <p className="text-sm text-gray-700 dark:text-gray-300">
-                        <span className="font-medium">Programa:</span>{' '}
-                        {enrollment.program?.name}
-                      </p>
-                      <p className="text-sm text-gray-700 dark:text-gray-300">
-                        <span className="font-medium">Periodo:</span>{' '}
-                        {enrollment.period?.name}
-                      </p>
+                      {[
+                        { label: 'Nombre', value: `${enrollment.student?.first_name} ${enrollment.student?.last_name}` },
+                        { label: 'Matrícula', value: enrollment.matricula },
+                        { label: 'Programa', value: enrollment.program?.name },
+                        { label: 'Periodo', value: enrollment.period?.name },
+                      ].map((row) => (
+                        <p key={row.label} style={{ color: 'var(--text-secondary)' }}>
+                          <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{row.label}:</span>{' '}
+                          {row.value}
+                        </p>
+                      ))}
                     </div>
 
                     <Button
                       onClick={() => {
-                        if (
-                          window.confirm(
-                            '¿Confirmas que tus datos son correctos y deseas solicitar tu credencial?'
-                          )
-                        ) {
+                        if (window.confirm('¿Confirmas que tus datos son correctos y deseas solicitar tu credencial?')) {
                           requestCredentialMutation.mutate(activeConvocatoria.id);
                         }
                       }}
                       isLoading={requestCredentialMutation.isPending}
                     >
-                      <Award size={18} className="mr-2" />
+                      <Award size={16} className="mr-2" />
                       Solicitar Credencial
                     </Button>
                   </div>
                 )}
 
-                {/* Solicitud enviada - pendiente */}
                 {myCredentialRequest?.status === 'pendiente' && (
-                  <div className="flex items-start gap-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <Clock className="text-yellow-600 flex-shrink-0 mt-0.5" size={16} />
-                    <div>
-                      <p className="text-sm font-medium text-yellow-800">
-                        Solicitud en revisión
-                      </p>
-                      <p className="text-sm text-yellow-700 mt-0.5">
-                        Tu solicitud de credencial está siendo revisada. Te notificaremos
-                        por correo cuando sea procesada.
-                      </p>
-                    </div>
-                  </div>
+                  <Callout color="warning" icon={<Clock size={16} />} title="Solicitud en revisión">
+                    Tu solicitud de credencial está siendo procesada. Te notificaremos por correo cuando esté lista.
+                  </Callout>
                 )}
 
-                {/* Rechazada */}
                 {myCredentialRequest?.status === 'rechazada' && (
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                      <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={16} />
-                      <div>
-                        <p className="text-sm font-medium text-red-800">Solicitud rechazada</p>
-                        {myCredentialRequest.rejection_reason && (
-                          <p className="text-sm text-red-700 mt-0.5">
-                            {myCredentialRequest.rejection_reason}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                  <Callout color="danger" icon={<AlertCircle size={16} />} title="Solicitud rechazada">
+                    {myCredentialRequest.rejection_reason && (
+                      <p>{myCredentialRequest.rejection_reason}</p>
+                    )}
+                  </Callout>
                 )}
 
-                {/* Generada - disponible para descargar */}
                 {myCredentialRequest?.status === 'generada' && (
                   <div className="space-y-3">
-                    <div className="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <CheckCircle className="text-green-600 flex-shrink-0 mt-0.5" size={18} />
-                      <div>
-                        <p className="font-medium text-green-900">
-                          ¡Tu credencial está lista!
+                    {/* Banner verde de credencial lista */}
+                    <div
+                      className="rounded-2xl p-5 border flex items-center gap-4 flex-wrap"
+                      style={{ background: 'var(--color-success-bg)', borderColor: 'var(--color-success-border)' }}
+                    >
+                      <div
+                        className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                        style={{ background: 'var(--color-success)', color: '#fff' }}
+                      >
+                        <Award size={24} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-base" style={{ color: 'var(--color-success)' }}>
+                          ¡Tu credencial estudiantil está lista!
                         </p>
-                        <p className="text-sm text-green-700 mt-0.5">
-                          Descarga tu credencial estudiantil en formato PDF.
+                        <p className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                          Descárgala en formato PDF para tenerla disponible en todo momento.
                         </p>
                       </div>
+                      {myCredentialRequest.credential_id && (
+                        <Button
+                          variant="success"
+                          onClick={() =>
+                            handleDownloadCredential(
+                              myCredentialRequest.credential_id!,
+                              myCredentialRequest.matricula,
+                            )
+                          }
+                          isLoading={isDownloadingCredential}
+                          disabled={isDownloadingCredential}
+                        >
+                          <Download size={16} className="mr-2" />
+                          Descargar Credencial
+                        </Button>
+                      )}
                     </div>
-                    {myCredentialRequest.credential_id && (
-                      <Button
-                        variant="success"
-                        onClick={() =>
-                          handleDownloadCredential(
-                            myCredentialRequest.credential_id!,
-                            myCredentialRequest.matricula
-                          )
-                        }
-                        isLoading={isDownloadingCredential}
-                        disabled={isDownloadingCredential}
-                      >
-                        <Download size={18} className="mr-2" />
-                        Descargar Credencial
-                      </Button>
-                    )}
                   </div>
                 )}
               </div>
@@ -1042,40 +1186,56 @@ export const MyApplication = () => {
           {/* Documentos de inscripción */}
           {(enrollment.status === 'pending_docs' || enrollment.status === 'pending_payment') && (
             <Card>
-              <div className="flex items-center mb-5">
-                <BookOpen className="text-primary-600 mr-3 flex-shrink-0" size={24} />
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                  Documentos de Inscripción
-                </h2>
-              </div>
+              <SectionTitle icon={<BookOpen size={17} />} title="Documentos de Inscripción" />
 
               {enrollment.status === 'pending_payment' ? (
-                <div className="flex items-start gap-3 p-3 bg-green-50 border border-green-200 rounded-lg mb-4">
-                  <CheckCircle className="text-green-600 flex-shrink-0 mt-0.5" size={18} />
-                  <p className="text-sm text-green-800">
-                    Todos tus documentos han sido aprobados. Procede al pago de inscripción.
-                  </p>
-                </div>
-              ) : enrollment.status === 'pending_docs' ? (
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  Sube los siguientes documentos para continuar con tu inscripción:
+                <Callout color="success" icon={<CheckCircle size={16} />} title="Documentos aprobados">
+                  Todos tus documentos han sido aprobados. Procede al pago de inscripción.
+                </Callout>
+              ) : (
+                <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
+                  Sube los siguientes documentos para continuar con tu inscripción formal:
                 </p>
-              ) : null}
+              )}
 
-              <div className="space-y-4">
+              <div className="space-y-3 mt-4">
                 {ENROLLMENT_DOC_TYPES.map(({ key, label }) => {
                   const uploaded = enrollment.documents?.find((d) => d.document_type === key);
-                  // Placeholder: record exists but no file yet (file_name is empty)
                   const isPlaceholder = uploaded && !uploaded.file_name;
                   const canUpload = !uploaded || isPlaceholder || uploaded.status === 'rejected';
+
+                  const statusIcon =
+                    uploaded?.status === 'approved' ? (
+                      <CheckCircle size={18} style={{ color: 'var(--color-success)' }} />
+                    ) : uploaded?.status === 'rejected' ? (
+                      <XCircle size={18} style={{ color: 'var(--color-danger)' }} />
+                    ) : uploaded ? (
+                      <Clock size={18} style={{ color: 'var(--color-warning)' }} />
+                    ) : null;
 
                   return (
                     <div
                       key={key}
-                      className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+                      className="rounded-xl border p-4"
+                      style={{
+                        background: 'var(--bg-surface-2)',
+                        borderColor:
+                          uploaded?.status === 'approved'
+                            ? 'var(--color-success-border)'
+                            : uploaded?.status === 'rejected'
+                            ? 'var(--color-danger-border)'
+                            : 'var(--border)',
+                      }}
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="font-medium text-gray-900 dark:text-gray-100">{label}</p>
+                      <div className="flex items-center justify-between gap-3 mb-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {statusIcon ?? (
+                            <FileText size={18} style={{ color: 'var(--text-muted)' }} />
+                          )}
+                          <p className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>
+                            {label}
+                          </p>
+                        </div>
                         {uploaded && (
                           <Badge
                             variant={
@@ -1092,18 +1252,25 @@ export const MyApplication = () => {
                       </div>
 
                       {uploaded?.reviewer_notes && uploaded.status === 'rejected' && (
-                        <p className="text-sm text-red-600 mb-2">
-                          <span className="font-medium">Motivo de rechazo:</span>{' '}
+                        <div
+                          className="rounded-lg p-3 border mb-3 text-xs"
+                          style={{
+                            background: 'var(--color-danger-bg)',
+                            borderColor: 'var(--color-danger-border)',
+                            color: 'var(--color-danger)',
+                          }}
+                        >
+                          <span className="font-semibold">Motivo de rechazo:</span>{' '}
                           {uploaded.reviewer_notes}
-                        </p>
+                        </div>
                       )}
 
                       {uploaded && !isPlaceholder && uploaded.status !== 'rejected' ? (
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                           Archivo: {uploaded.file_name}
                         </p>
                       ) : (
-                        <div className="flex items-center gap-3 mt-2">
+                        <div className="flex items-center gap-2 mt-2">
                           <input
                             type="file"
                             accept=".pdf,.jpg,.jpeg,.png"
@@ -1114,7 +1281,7 @@ export const MyApplication = () => {
                               }))
                             }
                             disabled={!canUpload}
-                            className="flex-1 text-sm text-gray-600 dark:text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 cursor-pointer"
+                            className="flex-1 text-sm text-gray-600 dark:text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
                           />
                           <Button
                             size="sm"
@@ -1125,7 +1292,7 @@ export const MyApplication = () => {
                               uploadEnrollDocMutation.variables?.docType === key
                             }
                           >
-                            <Upload size={14} className="mr-1" />
+                            <Upload size={13} className="mr-1" />
                             Subir
                           </Button>
                         </div>
@@ -1140,35 +1307,32 @@ export const MyApplication = () => {
           {/* Pago de inscripción */}
           {enrollment.status === 'pending_payment' && (
             <Card>
-              <div className="flex items-center mb-5">
-                <CreditCard className="text-primary-600 mr-3 flex-shrink-0" size={24} />
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                  Pago de Inscripción
-                </h2>
-              </div>
+              <SectionTitle icon={<CreditCard size={17} />} title="Pago de Inscripción" />
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-5">
-                <p className="text-blue-900 font-medium">Concepto: Pago de Inscripción</p>
+              <div
+                className="rounded-xl p-4 border mb-5"
+                style={{ background: 'var(--color-info-bg)', borderColor: 'var(--color-info-border)' }}
+              >
+                <p className="font-semibold text-sm" style={{ color: 'var(--color-info)' }}>
+                  Concepto: Pago de Inscripción
+                </p>
                 {enrollment.group && (
-                  <p className="text-sm text-blue-700 mt-1">
-                    Grupo: {enrollment.group} | Horario: {enrollment.schedule}
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+                    Grupo: {enrollment.group} · Horario: {enrollment.schedule}
                   </p>
                 )}
               </div>
 
               {isEnrollPaymentLoading && (
-                <p className="text-sm text-gray-500">Cargando información de pago...</p>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Cargando información de pago...</p>
               )}
 
               {!isEnrollPaymentLoading && !enrollmentPayment && (
                 <div className="text-center py-2">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
                     Genera tu ficha de pago para obtener el número de referencia bancaria.
                   </p>
-                  <Button
-                    onClick={() => createEnrollPaymentMutation.mutate()}
-                    isLoading={createEnrollPaymentMutation.isPending}
-                  >
+                  <Button onClick={() => createEnrollPaymentMutation.mutate()} isLoading={createEnrollPaymentMutation.isPending}>
                     Generar Ficha de Pago
                   </Button>
                 </div>
@@ -1177,53 +1341,42 @@ export const MyApplication = () => {
               {!isEnrollPaymentLoading && enrollmentPayment && (
                 <div className="space-y-4">
                   {enrollmentPayment.status === 'rejected' && (
-                    <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
-                      <XCircle className="text-red-600 flex-shrink-0 mt-0.5" size={18} />
-                      <div>
-                        <p className="font-medium text-red-900">Comprobante rechazado</p>
-                        {enrollmentPayment.validation_notes && (
-                          <p className="text-sm text-red-700 mt-1">
-                            {enrollmentPayment.validation_notes}
-                          </p>
-                        )}
-                        <p className="text-sm text-red-600 mt-1">
-                          Por favor sube un nuevo comprobante.
-                        </p>
-                      </div>
-                    </div>
+                    <Callout color="danger" icon={<XCircle size={17} />} title="Comprobante rechazado">
+                      {enrollmentPayment.validation_notes && <p>{enrollmentPayment.validation_notes}</p>}
+                      <p className="mt-1">Por favor sube un nuevo comprobante.</p>
+                    </Callout>
                   )}
 
-                  <div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Número de referencia</p>
-                    <p className="text-lg font-mono font-bold text-gray-900 dark:text-gray-100 tracking-wider">
+                  <div
+                    className="rounded-xl p-4 border"
+                    style={{ background: 'var(--bg-surface-2)', borderColor: 'var(--border)' }}
+                  >
+                    <p className="text-xs font-medium uppercase tracking-wide mb-1" style={{ color: 'var(--text-muted)' }}>
+                      Número de referencia
+                    </p>
+                    <p className="text-xl font-mono font-bold tracking-widest" style={{ color: 'var(--text-primary)' }}>
                       {enrollmentPayment.receipt_number}
                     </p>
                   </div>
 
-                  <Button
-                    variant="outline"
-                    onClick={handleDownloadEnrollSlip}
-                    isLoading={isDownloadingEnrollSlip}
-                    disabled={isDownloadingEnrollSlip}
-                  >
-                    <Download size={18} className="mr-2" />
+                  <Button variant="outline" onClick={handleDownloadEnrollSlip} isLoading={isDownloadingEnrollSlip} disabled={isDownloadingEnrollSlip}>
+                    <Download size={16} className="mr-2" />
                     Descargar Ficha de Pago
                   </Button>
 
                   {(enrollmentPayment.status === 'rejected' ||
-                    (enrollmentPayment.status === 'pending' &&
-                      enrollment.status === 'pending_payment')) && (
-                    <div className="border-t pt-4 space-y-3">
-                      <h4 className="font-medium text-gray-900 dark:text-gray-100">
-                        {enrollmentPayment.status === 'rejected'
-                          ? 'Subir nuevo comprobante'
-                          : 'Subir comprobante de pago'}
+                    (enrollmentPayment.status === 'pending' && enrollment.status === 'pending_payment')) && (
+                    <div
+                      className="rounded-xl p-4 border space-y-3"
+                      style={{ background: 'var(--bg-surface-2)', borderColor: 'var(--border)' }}
+                    >
+                      <h4 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
+                        {enrollmentPayment.status === 'rejected' ? 'Subir nuevo comprobante' : 'Subir comprobante de pago'}
                       </h4>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Fecha en que realizaste el pago{' '}
-                          <span className="text-red-500">*</span>
+                        <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                          Fecha en que realizaste el pago <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="date"
@@ -1231,26 +1384,22 @@ export const MyApplication = () => {
                           onChange={(e) => setEnrollmentPaymentDate(e.target.value)}
                           min={enrollmentPayment.created_at.slice(0, 10)}
                           max={new Date().toISOString().split('T')[0]}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
+                          className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          style={{ borderColor: 'var(--border)', background: 'var(--bg-surface)', color: 'var(--text-primary)' }}
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Archivo del comprobante{' '}
-                          <span className="text-red-500">*</span>
+                        <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                          Archivo del comprobante <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="file"
                           accept=".pdf,.jpg,.jpeg,.png"
-                          onChange={(e) =>
-                            setEnrollmentReceiptFile(e.target.files?.[0] ?? null)
-                          }
-                          className="w-full text-sm text-gray-600 dark:text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 cursor-pointer"
+                          onChange={(e) => setEnrollmentReceiptFile(e.target.files?.[0] ?? null)}
+                          className="w-full text-sm text-gray-600 dark:text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
                         />
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          PDF, JPG o PNG — máx. 5 MB
-                        </p>
+                        <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>PDF, JPG o PNG — máx. 5 MB</p>
                       </div>
 
                       <Button
@@ -1258,7 +1407,7 @@ export const MyApplication = () => {
                         isLoading={uploadEnrollReceiptMutation.isPending}
                         disabled={!enrollmentReceiptFile || !enrollmentPaymentDate}
                       >
-                        <Upload size={18} className="mr-2" />
+                        <Upload size={16} className="mr-2" />
                         Enviar Comprobante
                       </Button>
                     </div>
@@ -1267,33 +1416,18 @@ export const MyApplication = () => {
                   {enrollmentPayment.status === 'pending' &&
                     enrollment.status === 'pending_payment' &&
                     enrollmentPayment.receipt_file && (
-                    <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <CheckCircle className="text-yellow-600 flex-shrink-0 mt-0.5" size={16} />
-                      <p className="text-sm text-yellow-800">
-                        Tu comprobante fue enviado y está siendo revisado por el equipo de
-                        finanzas.
-                      </p>
-                    </div>
+                    <Callout color="warning" icon={<Clock size={17} />} title="Comprobante en revisión">
+                      Tu comprobante fue enviado y está siendo revisado por el equipo de finanzas.
+                    </Callout>
                   )}
 
                   {enrollmentPayment.status === 'validated' && (
                     <div className="space-y-3">
-                      <div className="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
-                        <CheckCircle className="text-green-600 flex-shrink-0 mt-0.5" size={18} />
-                        <div>
-                          <p className="font-medium text-green-900">Pago validado</p>
-                          <p className="text-sm text-green-700 mt-0.5">
-                            Tu pago fue confirmado. ¡Tu inscripción está en proceso de finalización!
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        variant="success"
-                        onClick={handleDownloadEnrollReceipt}
-                        isLoading={isDownloadingEnrollReceipt}
-                        disabled={isDownloadingEnrollReceipt}
-                      >
-                        <Download size={18} className="mr-2" />
+                      <Callout color="success" icon={<CheckCircle size={17} />} title="Pago validado">
+                        Tu pago fue confirmado. ¡Tu inscripción está en proceso de finalización!
+                      </Callout>
+                      <Button variant="success" onClick={handleDownloadEnrollReceipt} isLoading={isDownloadingEnrollReceipt} disabled={isDownloadingEnrollReceipt}>
+                        <Download size={16} className="mr-2" />
                         Descargar Recibo Oficial
                       </Button>
                     </div>
@@ -1305,59 +1439,43 @@ export const MyApplication = () => {
         </>
       )}
 
-      {application.status === 'rejected' && (
-        <Card className="border-l-4 border-red-500 bg-red-50">
-          <div className="text-center py-6">
-            <AlertCircle className="mx-auto text-red-600 mb-4" size={64} />
-            <h2 className="text-2xl font-bold text-red-900">Solicitud No Aceptada</h2>
-            <p className="text-red-700 mt-2">
-              Lamentamos informarte que tu solicitud no fue aceptada en este proceso.
-            </p>
-            {application.notes && (
-              <p className="text-sm text-red-700 mt-4 max-w-2xl mx-auto">
-                {application.notes}
-              </p>
-            )}
-          </div>
-        </Card>
-      )}
-
-      {/* Documentos */}
+      {/* ── Documentos (pre-inscripción) ─────────────────────────────────── */}
       <Card>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Documentos</h2>
+        <SectionTitle icon={<FileText size={17} />} title="Documentos de Solicitud" />
         <DocumentUploader application={application} />
       </Card>
 
-      {/* Botón de envío */}
+      {/* ── Enviar solicitud ─────────────────────────────────────────────── */}
       {application.status === 'draft' && (
-        <Card className="bg-primary-50">
-          <div className="text-center">
-            <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
-              ¿Listo para enviar tu solicitud?
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Asegúrate de haber subido todos los documentos requeridos antes de enviar.
+        <div
+          className="rounded-2xl p-6 border text-center"
+          style={{ background: 'var(--color-info-bg)', borderColor: 'var(--color-info-border)' }}
+        >
+          <h3 className="font-bold text-base mb-1" style={{ color: 'var(--color-info)' }}>
+            ¿Listo para enviar tu solicitud?
+          </h3>
+          <p className="text-sm mb-5" style={{ color: 'var(--text-secondary)' }}>
+            Asegúrate de haber subido todos los documentos requeridos antes de enviar.
+          </p>
+          <Button
+            size="lg"
+            onClick={() => {
+              if (window.confirm('¿Enviar solicitud? No podrás modificarla después.')) {
+                submitMutation.mutate();
+              }
+            }}
+            isLoading={submitMutation.isPending}
+            disabled={!canSubmitApplication()}
+          >
+            <Send size={18} className="mr-2" />
+            Enviar Solicitud
+          </Button>
+          {!canSubmitApplication() && (
+            <p className="text-xs mt-3" style={{ color: 'var(--color-danger)' }}>
+              Debes subir al menos un documento antes de enviar.
             </p>
-            <Button
-              size="lg"
-              onClick={() => {
-                if (window.confirm('¿Enviar solicitud? No podrás modificarla después.')) {
-                  submitMutation.mutate();
-                }
-              }}
-              isLoading={submitMutation.isPending}
-              disabled={!canSubmitApplication()}
-            >
-              <Send size={20} className="mr-2" />
-              Enviar Solicitud
-            </Button>
-            {!canSubmitApplication() && (
-              <p className="text-sm text-red-600 mt-2">
-                Debes subir al menos un documento antes de enviar
-              </p>
-            )}
-          </div>
-        </Card>
+          )}
+        </div>
       )}
     </div>
   );

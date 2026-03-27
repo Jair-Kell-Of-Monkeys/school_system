@@ -174,12 +174,12 @@ export const PaymentValidationModal = ({
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 Información del Aspirante
               </h3>
-              <div className="grid grid-cols-2 gap-4 bg-blue-50 p-4 rounded-lg">
+              <div className="grid grid-cols-2 gap-4 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
                 <div className="flex items-start">
                   <User className="text-blue-400 mr-3 mt-1" size={20} />
                   <div>
-                    <p className="text-sm text-blue-700">Nombre</p>
-                    <p className="font-medium text-blue-900">
+                    <p className="text-sm text-blue-700 dark:text-blue-300">Nombre</p>
+                    <p className="font-medium text-blue-900 dark:text-blue-100">
                       {payment.pre_enrollment_detail.student.first_name}{' '}
                       {payment.pre_enrollment_detail.student.last_name}
                     </p>
@@ -187,27 +187,27 @@ export const PaymentValidationModal = ({
                 </div>
 
                 <div>
-                  <p className="text-sm text-blue-700">CURP</p>
-                  <p className="font-medium text-blue-900">{payment.student_curp}</p>
+                  <p className="text-sm text-blue-700 dark:text-blue-300">CURP</p>
+                  <p className="font-medium text-blue-900 dark:text-blue-100">{payment.student_curp}</p>
                 </div>
 
                 <div>
-                  <p className="text-sm text-blue-700">Email</p>
-                  <p className="font-medium text-blue-900">
+                  <p className="text-sm text-blue-700 dark:text-blue-300">Email</p>
+                  <p className="font-medium text-blue-900 dark:text-blue-100">
                     {payment.pre_enrollment_detail.student.email}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-sm text-blue-700">Teléfono</p>
-                  <p className="font-medium text-blue-900">
+                  <p className="text-sm text-blue-700 dark:text-blue-300">Teléfono</p>
+                  <p className="font-medium text-blue-900 dark:text-blue-100">
                     {payment.pre_enrollment_detail.student.phone}
                   </p>
                 </div>
 
                 <div className="col-span-2">
-                  <p className="text-sm text-blue-700">Programa</p>
-                  <p className="font-medium text-blue-900">
+                  <p className="text-sm text-blue-700 dark:text-blue-300">Programa</p>
+                  <p className="font-medium text-blue-900 dark:text-blue-100">
                     {payment.pre_enrollment_detail.program.code} -{' '}
                     {payment.pre_enrollment_detail.program.name}
                   </p>
@@ -241,13 +241,15 @@ export const PaymentValidationModal = ({
               <div
                 className={`p-4 rounded-lg ${
                   payment.status === 'validated'
-                    ? 'bg-green-50 border border-green-200'
-                    : 'bg-red-50 border border-red-200'
+                    ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700'
+                    : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700'
                 }`}
               >
                 <h4
                   className={`font-semibold mb-2 ${
-                    payment.status === 'validated' ? 'text-green-900' : 'text-red-900'
+                    payment.status === 'validated'
+                      ? 'text-green-900 dark:text-green-200'
+                      : 'text-red-900 dark:text-red-200'
                   }`}
                 >
                   {payment.status === 'validated' ? 'Pago Validado' : 'Pago Rechazado'}
@@ -255,14 +257,18 @@ export const PaymentValidationModal = ({
                 <div className="space-y-2">
                   <p
                     className={`text-sm ${
-                      payment.status === 'validated' ? 'text-green-700' : 'text-red-700'
+                      payment.status === 'validated'
+                        ? 'text-green-700 dark:text-green-300'
+                        : 'text-red-700 dark:text-red-300'
                     }`}
                   >
                     Por: {payment.validated_by_email}
                   </p>
                   <p
                     className={`text-sm ${
-                      payment.status === 'validated' ? 'text-green-700' : 'text-red-700'
+                      payment.status === 'validated'
+                        ? 'text-green-700 dark:text-green-300'
+                        : 'text-red-700 dark:text-red-300'
                     }`}
                   >
                     Fecha:{' '}
@@ -277,8 +283,8 @@ export const PaymentValidationModal = ({
                   </p>
                   {payment.validation_notes && (
                     <div className="mt-3">
-                      <p className="text-sm font-medium">Notas:</p>
-                      <p className="text-sm">{payment.validation_notes}</p>
+                      <p className="text-sm font-medium dark:text-gray-300">Notas:</p>
+                      <p className="text-sm dark:text-gray-400">{payment.validation_notes}</p>
                     </div>
                   )}
                 </div>
@@ -287,7 +293,7 @@ export const PaymentValidationModal = ({
 
             {/* Acciones de Validación (solo si está pendiente) */}
             {payment.status === 'pending' && (
-              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg">
                 <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
                   Validar Comprobante de Pago
                 </h4>
@@ -295,7 +301,7 @@ export const PaymentValidationModal = ({
                   placeholder="Notas sobre la validación (opcional)..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg mb-4 dark:bg-gray-700 dark:text-gray-100"
                   rows={3}
                 />
                 <div className="flex space-x-3">

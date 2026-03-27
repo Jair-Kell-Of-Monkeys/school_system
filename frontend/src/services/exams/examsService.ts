@@ -4,6 +4,7 @@ import type {
   ExamSessionDetail,
   ExamAspirant,
   AspirantCount,
+  CapacityStatus,
   PaginatedResponse,
 } from '@/types';
 
@@ -75,6 +76,12 @@ export const examsService = {
     const response = await axios.get('/exams/sessions/aspirant-counts/', {
       params: { period: periodId },
     });
+    return response.data;
+  },
+
+  // Estado de cupo por programa para una sesión publicada
+  async getCapacityStatus(sessionId: string): Promise<CapacityStatus[]> {
+    const response = await axios.get(`/exams/sessions/${sessionId}/capacity-status/`);
     return response.data;
   },
 };

@@ -332,12 +332,15 @@ class ExamSessionViewSet(viewsets.ModelViewSet):
         attended = grade_serializer.validated_data['attended']
         exam_score = grade_serializer.validated_data.get('exam_score')
 
+        rejection_reason = None
+
         with transaction.atomic():
             pre_enrollment.exam_completed_at = timezone.now()
 
             if not attended:
                 pre_enrollment.exam_score = None
                 pre_enrollment.status = 'rejected'
+                rejection_reason = 'no_attendance'
                 pre_enrollment.save(
                     update_fields=['status', 'exam_score', 'exam_completed_at', 'updated_at']
                 )
@@ -349,76 +352,155 @@ class ExamSessionViewSet(viewsets.ModelViewSet):
 
                 passing = session.passing_score
                 if exam_score >= passing:
-                    pre_enrollment.status = 'accepted'
-                    pre_enrollment.save(update_fields=['status', 'updated_at'])
-
-                    # Create formal Enrollment if it doesn't exist yet
+                    # Check capacity: count accepted enrollments for this program/period
                     try:
                         from apps.enrollments.models import Enrollment
                         from apps.enrollments.generators import (
                             generate_matricula,
                             generate_institutional_email,
                         )
+                        from apps.academic.models import AcademicProgram
 
-                        if not Enrollment.objects.filter(
-                            pre_enrollment=pre_enrollment
-                        ).exists():
-                            student = pre_enrollment.student
-                            program = pre_enrollment.program
-                            period = pre_enrollment.period
+                        program = pre_enrollment.program
+                        period = pre_enrollment.period
 
-                            matricula = generate_matricula(
-                                program_code=program.code,
-                                period_year=str(period.start_date.year),
-                            )
+                        accepted_count = Enrollment.objects.filter(
+                            program=program,
+                            period=period,
+                        ).count()
 
-                            if not student.institutional_email:
-                                inst_email = generate_institutional_email(student)
-                                student.institutional_email = inst_email
-                                student.save(update_fields=['institutional_email'])
+                        max_capacity = program.max_capacity or 0
 
-                            enrollment = Enrollment(
-                                student=student,
-                                program=program,
-                                period=period,
-                                pre_enrollment=pre_enrollment,
-                                matricula=matricula,
-                                status='pending_docs',
-                                enrolled_at=timezone.now(),
-                            )
-                            enrollment.save()
+                        if accepted_count < max_capacity:
+                            pre_enrollment.status = 'accepted'
+                            pre_enrollment.save(update_fields=['status', 'updated_at'])
 
+                            if not Enrollment.objects.filter(
+                                pre_enrollment=pre_enrollment
+                            ).exists():
+                                student = pre_enrollment.student
+
+                                matricula = generate_matricula(
+                                    program_code=program.code,
+                                    period_year=str(period.start_date.year),
+                                )
+
+                                if not student.institutional_email:
+                                    inst_email = generate_institutional_email(student)
+                                    student.institutional_email = inst_email
+                                    student.save(update_fields=['institutional_email'])
+
+                                enrollment = Enrollment(
+                                    student=student,
+                                    program=program,
+                                    period=period,
+                                    pre_enrollment=pre_enrollment,
+                                    matricula=matricula,
+                                    status='pending_docs',
+                                    enrolled_at=timezone.now(),
+                                )
+                                enrollment.save()
+
+                                logger.info(
+                                    '[grade] Enrollment created: matricula=%s student=%s',
+                                    matricula, student.pk,
+                                )
+                        else:
+                            pre_enrollment.status = 'rejected'
+                            rejection_reason = 'capacity_full'
+                            pre_enrollment.save(update_fields=['status', 'updated_at'])
                             logger.info(
-                                '[grade] Enrollment created: matricula=%s student=%s',
-                                matricula, student.pk,
+                                '[grade] Rejected due to capacity: program=%s accepted=%s max=%s',
+                                program.code, accepted_count, max_capacity,
                             )
                     except Exception as exc:
-                        logger.error('[grade] Error creating enrollment: %s', exc)
+                        logger.error('[grade] Error in capacity check/enrollment creation: %s', exc)
+                        # Fallback: accept without capacity check
+                        pre_enrollment.status = 'accepted'
+                        pre_enrollment.save(update_fields=['status', 'updated_at'])
                 else:
                     pre_enrollment.status = 'rejected'
+                    rejection_reason = 'low_score'
                     pre_enrollment.save(update_fields=['status', 'updated_at'])
 
         # Send result email (async, sync fallback)
         try:
             from apps.exams.tasks import send_exam_result_email_task
-            send_exam_result_email_task.delay(str(pre_enrollment.pk), str(session.id))
+            send_exam_result_email_task.delay(
+                str(pre_enrollment.pk), str(session.id), rejection_reason
+            )
         except Exception:
             try:
                 from apps.exams.email_service import send_exam_result_email
-                send_exam_result_email(pre_enrollment, passing_score=session.passing_score)
+                send_exam_result_email(
+                    pre_enrollment,
+                    passing_score=session.passing_score,
+                    rejection_reason=rejection_reason,
+                )
             except Exception as email_exc:
                 logger.error('[grade] Error sending result email: %s', email_exc)
 
         final_status = pre_enrollment.status
+        if final_status == 'accepted':
+            message = 'Aspirante aceptado correctamente.'
+        elif rejection_reason == 'capacity_full':
+            message = 'Aspirante no aceptado: cupo máximo del programa alcanzado.'
+        elif rejection_reason == 'low_score':
+            message = 'Aspirante no aceptado: calificación insuficiente.'
+        else:
+            message = 'Aspirante no aceptado.'
+
         return Response({
-            'message': (
-                'Aspirante aceptado correctamente.'
-                if final_status == 'accepted'
-                else 'Aspirante no aceptado.'
-            ),
+            'message': message,
             'status': final_status,
+            'rejection_reason': rejection_reason,
             'exam_score': str(exam_score) if exam_score is not None else None,
         })
+
+    # ── CAPACITY STATUS ───────────────────────────────────────────────────────
+
+    @action(
+        detail=True,
+        methods=['get'],
+        permission_classes=[IsJefeServicios],
+        url_path='capacity-status',
+    )
+    def capacity_status(self, request, pk=None):
+        """
+        GET /api/exams/sessions/{id}/capacity-status/
+
+        Para cada programa configurado en el examen, devuelve:
+          programa, max_capacity, accepted_count, available_spots.
+        """
+        session = self.get_object()
+        from apps.enrollments.models import Enrollment
+
+        venues = session.venues.select_related('program').all()
+        seen_programs: set[int] = set()
+        result = []
+
+        for venue in venues:
+            program = venue.program
+            if program.id in seen_programs:
+                continue
+            seen_programs.add(program.id)
+
+            accepted_count = Enrollment.objects.filter(
+                program=program,
+                period=session.period,
+            ).count()
+
+            max_capacity = program.max_capacity or 0
+            result.append({
+                'program_id': program.id,
+                'program_code': program.code,
+                'program_name': program.name,
+                'max_capacity': max_capacity,
+                'accepted_count': accepted_count,
+                'available_spots': max(0, max_capacity - accepted_count),
+            })
+
+        return Response(result)
 
     # ── ASPIRANT COUNTS ───────────────────────────────────────────────────────
 

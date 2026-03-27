@@ -295,6 +295,15 @@ export interface AspirantCount {
   aspirant_count: number;
 }
 
+export interface CapacityStatus {
+  program_id: number;
+  program_code: string;
+  program_name: string;
+  max_capacity: number;
+  accepted_count: number;
+  available_spots: number;
+}
+
 export interface EnrollmentDocument {
   id: string;
   document_type: string;

@@ -136,7 +136,7 @@ def send_exam_assigned_email(pre_enrollment) -> bool:
         return False
 
 
-def send_exam_result_email(pre_enrollment, passing_score=None) -> bool:
+def send_exam_result_email(pre_enrollment, passing_score=None, rejection_reason=None) -> bool:
     """
     Notifica al aspirante el resultado del examen de admisión
     (aceptado o rechazado) junto con su calificación.
@@ -144,6 +144,7 @@ def send_exam_result_email(pre_enrollment, passing_score=None) -> bool:
     Args:
         pre_enrollment: instancia de PreEnrollment con student__user y program cargados.
         passing_score: calificación mínima aprobatoria (opcional, para mostrar en el email).
+        rejection_reason: 'low_score', 'capacity_full', 'no_attendance' o None.
     """
     student = pre_enrollment.student
     user_email = student.user.email
@@ -173,10 +174,24 @@ def send_exam_result_email(pre_enrollment, passing_score=None) -> bool:
         header_color = '#dc2626'
         header_title = '📋 Resultado de Examen'
         result_text = '<strong style="color:#dc2626;">NO ACEPTADO</strong>'
-        body_text = (
-            f'Lamentamos informarte que no alcanzaste la calificación mínima requerida '
-            f'para el programa <strong>{program_name}</strong> en este proceso de admisión.'
-        )
+
+        if rejection_reason == 'capacity_full':
+            body_text = (
+                f'Lamentamos informarte que, aunque obtuviste una calificación aprobatoria, '
+                f'el cupo máximo del programa <strong>{program_name}</strong> ha sido alcanzado '
+                f'para este proceso de admisión. Tu solicitud no pudo ser aceptada por falta de cupo.'
+            )
+        elif rejection_reason == 'no_attendance':
+            body_text = (
+                f'Lamentamos informarte que no se registró tu asistencia al examen de admisión '
+                f'del programa <strong>{program_name}</strong>. Por ello tu solicitud no pudo ser aceptada.'
+            )
+        else:
+            body_text = (
+                f'Lamentamos informarte que no alcanzaste la calificación mínima requerida '
+                f'para el programa <strong>{program_name}</strong> en este proceso de admisión.'
+            )
+
         next_steps = """
         <p style="color:#4b5563;">
             Te invitamos a continuar preparándote y participar en el próximo proceso

@@ -1,22 +1,48 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/atoms/Button/Button';
-import { Badge } from '@/components/atoms/Badge/Badge';
-import type { Document, MyApplication } from '@/types';
+import type { MyApplication } from '@/types';
 import { aspirantService } from '@/services/aspirant/aspirantService';
-import { Upload, FileText, Trash2, Download, CheckCircle, XCircle } from 'lucide-react';
+import {
+  Upload, FileText, Trash2, Download,
+  CheckCircle, XCircle, Clock, AlertCircle,
+} from 'lucide-react';
 
 interface DocumentUploaderProps {
   application: MyApplication;
-} 
+}
 
 const DOCUMENT_TYPES = [
-  { value: 'acta_nacimiento', label: 'Acta de Nacimiento' },
-  { value: 'curp', label: 'CURP' },
-  { value: 'comprobante_domicilio', label: 'Comprobante de Domicilio' },
+  { value: 'acta_nacimiento',      label: 'Acta de Nacimiento' },
+  { value: 'curp',                 label: 'CURP' },
+  { value: 'comprobante_domicilio',label: 'Comprobante de Domicilio' },
   { value: 'certificado_estudios', label: 'Certificado de Estudios' },
-  { value: 'fotografia', label: 'Fotografía' },
+  { value: 'fotografia',           label: 'Fotografía' },
 ];
+
+const STATUS_CONFIG = {
+  approved: {
+    icon: CheckCircle,
+    color: '#22c55e',
+    bg: 'var(--color-success-bg)',
+    border: 'var(--color-success-border)',
+    label: 'Aprobado',
+  },
+  rejected: {
+    icon: XCircle,
+    color: '#ef4444',
+    bg: 'var(--color-danger-bg)',
+    border: 'var(--color-danger-border)',
+    label: 'Rechazado',
+  },
+  pending: {
+    icon: Clock,
+    color: '#f59e0b',
+    bg: 'var(--color-warning-bg)',
+    border: 'var(--color-warning-border)',
+    label: 'Pendiente',
+  },
+} as const;
 
 export const DocumentUploader = ({ application }: DocumentUploaderProps) => {
   const queryClient = useQueryClient();
@@ -48,173 +74,220 @@ export const DocumentUploader = ({ application }: DocumentUploaderProps) => {
     mutationFn: (documentId: string) => aspirantService.deleteDocument(documentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-application'] });
-      alert('Documento eliminado');
     },
   });
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
-    }
-  };
-
-  const handleUpload = () => {
-    if (!selectedType || !selectedFile) {
-      alert('Por favor selecciona el tipo de documento y un archivo');
-      return;
-    }
-    uploadMutation.mutate({ type: selectedType, file: selectedFile });
-  };
-
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, { variant: 'success' | 'warning' | 'danger'; label: string }> = {
-      pending: { variant: 'warning', label: 'Pendiente' },
-      approved: { variant: 'success', label: 'Aprobado' },
-      rejected: { variant: 'danger', label: 'Rechazado' },
-    };
-    const config = variants[status] || { variant: 'warning', label: status };
-    return <Badge variant={config.variant}>{config.label}</Badge>;
-  };
 
   const canUploadDocuments = ['draft', 'documents_rejected'].includes(application.status);
 
   return (
-    <div className="space-y-6">
-      {/* Lista de documentos */}
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-          Documentos Requeridos
-        </h3>
+    <div className="space-y-4">
+
+      {/* Document cards */}
+      {application.documents && application.documents.length > 0 ? (
         <div className="space-y-3">
-          {application.documents && application.documents.length > 0 ? (
-            application.documents.map((doc) => (
+          {application.documents.map((doc) => {
+            const cfg = STATUS_CONFIG[doc.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.pending;
+            const Icon = cfg.icon;
+            const isRejected = doc.status === 'rejected';
+            const canDelete = canUploadDocuments && doc.status !== 'approved' && doc.status !== 'rejected';
+
+            return (
               <div
                 key={doc.id}
-                className="border border-gray-200 dark:border-gray-700 rounded-lg"
+                className="rounded-xl overflow-hidden"
+                style={{
+                  background: 'var(--bg-surface)',
+                  border: `1px solid ${cfg.border}`,
+                }}
               >
-                {/* Fila principal */}
-                <div className="flex items-center justify-between p-4">
-                  <div className="flex items-center space-x-3">
-                    <FileText className="text-gray-400" size={24} />
-                    <div>
-                      <p className="font-medium text-gray-900 dark:text-gray-100">
+                {/* Main row */}
+                <div className="flex items-start gap-3 p-4">
+                  {/* Status icon */}
+                  <div
+                    className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                    style={{ background: cfg.bg }}
+                  >
+                    <Icon size={18} style={{ color: cfg.color }} />
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>
                         {doc.document_type_display}
                       </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Subido: {new Date(doc.uploaded_at).toLocaleDateString('es-MX')}
-                      </p>
-                      {doc.reviewer_notes && (
-                        <p className="text-sm text-amber-700 mt-1">
-                          <span className="font-medium">Observación:</span>{' '}
-                          {doc.reviewer_notes}
-                        </p>
-                      )}
+                      <span
+                        className="text-xs font-medium px-2 py-0.5 rounded-full"
+                        style={{ background: cfg.bg, color: cfg.color }}
+                      >
+                        {cfg.label}
+                      </span>
                     </div>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                      Subido el {new Date(doc.uploaded_at).toLocaleDateString('es-MX')}
+                    </p>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    {getStatusBadge(doc.status)}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => doc.file_url && window.open(doc.file_url, '_blank')}
-                    >
-                      <Download size={16} />
-                    </Button>
-                    {canUploadDocuments && doc.status !== 'approved' && doc.status !== 'rejected' && (
-                      <Button
-                        size="sm"
-                        variant="danger"
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {doc.file_url && (
+                      <button
+                        onClick={() => window.open(doc.file_url, '_blank')}
+                        className="p-1.5 rounded-lg transition-colors"
+                        style={{ color: 'var(--text-muted)' }}
+                        title="Ver documento"
+                      >
+                        <Download size={15} />
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
                         onClick={() => {
                           if (window.confirm('¿Eliminar este documento?')) {
                             deleteMutation.mutate(doc.id);
                           }
                         }}
+                        className="p-1.5 rounded-lg transition-colors"
+                        style={{ color: '#f87171' }}
+                        title="Eliminar"
                       >
-                        <Trash2 size={16} />
-                      </Button>
+                        <Trash2 size={15} />
+                      </button>
                     )}
                   </div>
                 </div>
 
-                {/* Re-subir documento rechazado */}
-                {doc.status === 'rejected' && (
-                  <div className="border-t border-red-100 px-4 pb-3 pt-3 bg-red-50 rounded-b-lg">
+                {/* Reviewer notes callout */}
+                {doc.reviewer_notes && (
+                  <div
+                    className="mx-4 mb-4 rounded-lg p-3 flex gap-2.5"
+                    style={{
+                      background: isRejected ? 'var(--color-danger-bg)' : 'var(--color-warning-bg)',
+                      border: `1px solid ${isRejected ? 'var(--color-danger-border)' : 'var(--color-warning-border)'}`,
+                    }}
+                  >
+                    <AlertCircle
+                      size={15}
+                      className="shrink-0 mt-0.5"
+                      style={{ color: isRejected ? '#ef4444' : '#f59e0b' }}
+                    />
+                    <div>
+                      <p
+                        className="text-xs font-semibold mb-0.5"
+                        style={{ color: isRejected ? '#ef4444' : '#d97706' }}
+                      >
+                        Observación del encargado
+                      </p>
+                      <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                        {doc.reviewer_notes}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Re-upload section for rejected docs */}
+                {isRejected && canUploadDocuments && (
+                  <div
+                    className="px-4 pb-4"
+                  >
                     {reuploadDocId === doc.id ? (
-                      <div className="space-y-2">
+                      <div
+                        className="rounded-lg p-3 space-y-3"
+                        style={{
+                          background: 'var(--bg-surface-2)',
+                          border: '1px solid var(--border)',
+                        }}
+                      >
                         <input
                           type="file"
                           accept=".pdf,.jpg,.jpeg,.png"
                           onChange={(e) => setReuploadFile(e.target.files?.[0] ?? null)}
-                          className="w-full text-sm text-gray-600 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:bg-white file:text-gray-700 hover:file:bg-gray-100"
+                          className="w-full text-sm file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium cursor-pointer"
+                          style={{ color: 'var(--text-secondary)' }}
                         />
-                        <div className="flex space-x-2">
+                        <div className="flex gap-2">
                           <Button
                             size="sm"
                             onClick={() =>
                               reuploadFile &&
-                              uploadMutation.mutate({
-                                type: doc.document_type,
-                                file: reuploadFile,
-                              })
+                              uploadMutation.mutate({ type: doc.document_type, file: reuploadFile })
                             }
                             isLoading={uploadMutation.isPending}
                             disabled={!reuploadFile}
                           >
-                            <Upload size={14} className="mr-1" />
+                            <Upload size={13} className="mr-1.5" />
                             Confirmar
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => {
-                              setReuploadDocId(null);
-                              setReuploadFile(null);
-                            }}
+                            onClick={() => { setReuploadDocId(null); setReuploadFile(null); }}
                           >
                             Cancelar
                           </Button>
                         </div>
                       </div>
                     ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setReuploadDocId(doc.id);
-                          setReuploadFile(null);
+                      <button
+                        onClick={() => { setReuploadDocId(doc.id); setReuploadFile(null); }}
+                        className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+                        style={{
+                          background: 'var(--color-danger-bg)',
+                          color: '#ef4444',
+                          border: '1px solid var(--color-danger-border)',
                         }}
                       >
-                        <Upload size={14} className="mr-1" />
-                        Re-subir documento
-                      </Button>
+                        <Upload size={13} />
+                        Volver a subir
+                      </button>
                     )}
                   </div>
                 )}
               </div>
-            ))
-          ) : (
-            <p className="text-center text-gray-500 py-8">
-              No has subido documentos aún
-            </p>
-          )}
+            );
+          })}
         </div>
-      </div>
+      ) : (
+        <div
+          className="rounded-xl p-8 text-center"
+          style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
+        >
+          <FileText size={32} className="mx-auto mb-2" style={{ color: 'var(--text-muted)' }} />
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            No has subido documentos aún
+          </p>
+        </div>
+      )}
 
-      {/* Formulario de subida */}
+      {/* Upload form */}
       {canUploadDocuments && (
-        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">Subir Nuevo Documento</h4>
-          <div className="space-y-4">
+        <div
+          className="rounded-xl p-4 space-y-4"
+          style={{
+            background: 'var(--color-info-bg)',
+            border: '1px solid var(--color-info-border)',
+          }}
+        >
+          <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+            Subir Nuevo Documento
+          </p>
+
+          <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Tipo de Documento
+              <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                Tipo de documento
               </label>
               <select
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
+                className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                style={{
+                  background: 'var(--bg-surface-2)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-primary)',
+                }}
               >
-                <option value="">Selecciona un tipo...</option>
+                <option value="">Selecciona un tipo…</option>
                 {DOCUMENT_TYPES.map((type) => (
                   <option key={type.value} value={type.value}>
                     {type.label}
@@ -224,28 +297,39 @@ export const DocumentUploader = ({ application }: DocumentUploaderProps) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Archivo (PDF, JPG, PNG - Máx. 5MB)
+              <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                Archivo (PDF, JPG, PNG — máx. 5 MB)
               </label>
               <input
                 type="file"
                 accept=".pdf,.jpg,.jpeg,.png"
-                onChange={handleFileChange}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-300"
+                onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+                className="w-full px-3 py-2 rounded-lg text-sm file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium cursor-pointer"
+                style={{
+                  background: 'var(--bg-surface-2)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-secondary)',
+                }}
               />
               {selectedFile && (
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  Seleccionado: {selectedFile.name}
+                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                  {selectedFile.name}
                 </p>
               )}
             </div>
 
             <Button
-              onClick={handleUpload}
+              onClick={() => {
+                if (!selectedType || !selectedFile) {
+                  alert('Por favor selecciona el tipo de documento y un archivo');
+                  return;
+                }
+                uploadMutation.mutate({ type: selectedType, file: selectedFile });
+              }}
               isLoading={uploadMutation.isPending}
               disabled={!selectedType || !selectedFile}
             >
-              <Upload size={16} className="mr-2" />
+              <Upload size={15} className="mr-2" />
               Subir Documento
             </Button>
           </div>
@@ -253,10 +337,19 @@ export const DocumentUploader = ({ application }: DocumentUploaderProps) => {
       )}
 
       {!canUploadDocuments && (
-        <div className="p-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-center">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            No puedes subir documentos en este momento. Tu solicitud está en estado:{' '}
-            <span className="font-semibold">{application.status_display}</span>
+        <div
+          className="rounded-xl p-4 text-center"
+          style={{
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border)',
+          }}
+        >
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            No puedes subir documentos en este momento.{' '}
+            Tu solicitud está en estado:{' '}
+            <span className="font-semibold" style={{ color: 'var(--text-secondary)' }}>
+              {application.status_display}
+            </span>
           </p>
         </div>
       )}

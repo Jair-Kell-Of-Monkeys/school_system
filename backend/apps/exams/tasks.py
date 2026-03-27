@@ -105,7 +105,12 @@ def send_exam_assigned_email_task(self, pre_enrollment_id: str) -> bool:
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
-def send_exam_result_email_task(self, pre_enrollment_id: str, session_id: str = None) -> bool:
+def send_exam_result_email_task(
+    self,
+    pre_enrollment_id: str,
+    session_id: str = None,
+    rejection_reason: str = None,
+) -> bool:
     """Envía email con el resultado del examen de admisión."""
     try:
         from apps.pre_enrollment.models import PreEnrollment
@@ -124,6 +129,10 @@ def send_exam_result_email_task(self, pre_enrollment_id: str, session_id: str = 
             except ExamSession.DoesNotExist:
                 pass
 
-        return send_exam_result_email(pre_enrollment, passing_score=passing_score)
+        return send_exam_result_email(
+            pre_enrollment,
+            passing_score=passing_score,
+            rejection_reason=rejection_reason,
+        )
     except Exception as exc:
         raise self.retry(exc=exc)

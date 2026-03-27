@@ -163,7 +163,7 @@ export const Credentials = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Requisitos de fotografía
               </label>
               <textarea
@@ -171,7 +171,7 @@ export const Credentials = () => {
                 onChange={(e) => setFormData({ ...formData, requirements: e.target.value })}
                 rows={2}
                 placeholder="Ej: Fondo blanco, reciente, sin lentes..."
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
               />
             </div>
             {formError && (
@@ -200,7 +200,7 @@ export const Credentials = () => {
         <Card>
           <div className="text-center py-12">
             <FileText className="mx-auto text-gray-300 mb-4" size={48} />
-            <h3 className="text-lg font-medium text-gray-900">Sin convocatorias</h3>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Sin convocatorias</h3>
             <p className="text-gray-500 mt-1">Crea la primera convocatoria de credencialización.</p>
           </div>
         </Card>
@@ -211,10 +211,10 @@ export const Credentials = () => {
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="font-semibold text-gray-900">{conv.title}</h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">{conv.title}</h3>
                     <Badge variant={statusBadgeVariant(conv.status)}>{conv.status_display}</Badge>
                   </div>
-                  <p className="text-sm text-gray-600 mb-1">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                     <span className="font-medium">Periodo:</span> {conv.period_name}
                   </p>
                   <div className="flex items-center gap-4 text-sm text-gray-500">
@@ -224,7 +224,7 @@ export const Credentials = () => {
                     </span>
                   </div>
                   {conv.description && (
-                    <p className="text-sm text-gray-600 mt-2">{conv.description}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">{conv.description}</p>
                   )}
                   {conv.requirements && (
                     <p className="text-xs text-gray-500 mt-1">

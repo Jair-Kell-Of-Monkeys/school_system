@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Landing } from '@/pages/Landing/Landing';
 import { Login } from '@/pages/Login/Login';
 import { Register } from '@/pages/Register/Register';
 import { VerifyEmail } from '@/pages/VerifyEmail/VerifyEmail';
@@ -33,6 +34,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           {/* Rutas públicas */}
+          <Route path="/" element={<Landing />} />
           <Route path={ROUTES.LOGIN} element={<Login />} />
           <Route path={ROUTES.REGISTER} element={<Register />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
@@ -183,8 +185,8 @@ function App() {
             }
           />
 
-          {/* Ruta por defecto */}
-          <Route path="/" element={<Navigate to={ROUTES.DASHBOARD} replace />} />
+          {/* Ruta por defecto (fallback para rutas desconocidas) */}
+          <Route path="/home" element={<Navigate to="/" replace />} />
 
           {/* 404 */}
           <Route

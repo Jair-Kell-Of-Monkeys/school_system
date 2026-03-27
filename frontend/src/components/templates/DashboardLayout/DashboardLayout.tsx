@@ -59,7 +59,6 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       return [
         ...baseItems,
         { icon: DollarSign,   label: 'Validar Pagos',             path: '/payments' },
-        { icon: FileText,     label: 'Pre-inscripciones',         path: ROUTES.PRE_ENROLLMENTS },
       ];
     }
 
@@ -131,7 +130,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           className="rounded-lg px-3 py-2.5"
           style={{ background: 'rgba(255,255,255,0.05)' }}
         >
-
+          <p className="text-white text-xs font-medium truncate">{user?.email}</p>
         </div>
 
         {/* Logout */}
