@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card } from '@/components/atoms/Card/Card';
 import { Button } from '@/components/atoms/Button/Button';
@@ -8,6 +8,7 @@ import { aspirantService } from '@/services/aspirant/aspirantService';
 import { paymentsService } from '@/services/payments/paymentsService';
 import { enrollmentsService } from '@/services/enrollments/enrollmentsService';
 import { credentialsService } from '@/services/credentials/credentialsService';
+import { studentsService } from '@/services/students/studentsService';
 import type { EnrollmentDetail } from '@/types';
 import type { MyApplication as MyApplicationType } from '@/types';
 import {
@@ -297,6 +298,10 @@ export const MyApplication = () => {
   const [isDownloadingComprobante, setIsDownloadingComprobante] = useState(false);
   const [enrollDocFiles, setEnrollDocFiles] = useState<Record<string, File | null>>({});
   const [isDownloadingCredential, setIsDownloadingCredential] = useState(false);
+  const [credDataConfirmed, setCredDataConfirmed] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // ── Queries ──────────────────────────────────────────────────────────────
 
@@ -349,6 +354,16 @@ export const MyApplication = () => {
   });
   const activeConvocatoria = activeConvocatorias[0] ?? null;
 
+  useQuery({
+    queryKey: ['my-student-profile'],
+    queryFn: async () => {
+      const profile = await studentsService.getMyProfile();
+      setPhotoUrl(profile.photo_url ?? null);
+      return profile;
+    },
+    enabled: !!enrollment && enrollment.status === 'enrolled',
+  });
+
   // ── Mutations ─────────────────────────────────────────────────────────────
 
   const createMutation = useMutation({
@@ -376,11 +391,36 @@ export const MyApplication = () => {
     mutationFn: (convocatoriaId: string) => credentialsService.createRequest(convocatoriaId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-credential-requests'] });
+      setCredDataConfirmed(false);
     },
     onError: (err: any) => {
       alert(err?.response?.data?.error || 'Error al solicitar la credencial.');
     },
   });
+
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!['image/jpeg', 'image/png'].includes(file.type)) {
+      alert('Solo se aceptan imágenes JPG o PNG.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alert('La imagen no debe superar 2 MB.');
+      return;
+    }
+    setIsUploadingPhoto(true);
+    try {
+      const result = await studentsService.uploadMyPhoto(file);
+      setPhotoUrl(result.photo_url);
+      queryClient.invalidateQueries({ queryKey: ['my-student-profile'] });
+    } catch {
+      alert('Error al subir la foto. Intenta de nuevo.');
+    } finally {
+      setIsUploadingPhoto(false);
+      if (photoInputRef.current) photoInputRef.current.value = '';
+    }
+  };
 
   const createPaymentMutation = useMutation({
     mutationFn: () =>
@@ -1060,6 +1100,7 @@ export const MyApplication = () => {
 
                 {!myCredentialRequest && activeConvocatoria && (
                   <div className="space-y-4">
+                    {/* Convocatoria info */}
                     <div
                       className="rounded-xl p-4 border"
                       style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}
@@ -1090,34 +1131,91 @@ export const MyApplication = () => {
                       </p>
                     </div>
 
-                    {/* Verificación de datos */}
+                    {/* Verificación de datos con foto */}
                     <div
-                      className="rounded-xl p-4 border text-sm space-y-1"
+                      className="rounded-xl p-4 border"
                       style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}
                     >
-                      <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>
+                      <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
                         Verifica tus datos antes de solicitar
                       </p>
-                      {[
-                        { label: 'Nombre', value: `${enrollment.student?.first_name} ${enrollment.student?.last_name}` },
-                        { label: 'Matrícula', value: enrollment.matricula },
-                        { label: 'Programa', value: enrollment.program?.name },
-                        { label: 'Periodo', value: enrollment.period?.name },
-                      ].map((row) => (
-                        <p key={row.label} style={{ color: 'var(--text-secondary)' }}>
-                          <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{row.label}:</span>{' '}
-                          {row.value}
-                        </p>
-                      ))}
+                      <div className="flex gap-4 items-start">
+                        {/* Foto */}
+                        <div className="flex-shrink-0 flex flex-col items-center gap-2">
+                          {photoUrl ? (
+                            <img
+                              src={photoUrl}
+                              alt="Tu foto"
+                              className="w-20 h-24 object-cover rounded-lg border"
+                              style={{ borderColor: 'var(--border)' }}
+                            />
+                          ) : (
+                            <div
+                              className="w-20 h-24 rounded-lg flex flex-col items-center justify-center border"
+                              style={{ background: 'var(--bg-surface-2)', borderColor: 'var(--border)' }}
+                            >
+                              <Upload size={20} style={{ color: 'var(--text-muted)' }} />
+                              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Sin foto</p>
+                            </div>
+                          )}
+                          <input
+                            ref={photoInputRef}
+                            type="file"
+                            accept="image/jpeg,image/png"
+                            className="hidden"
+                            onChange={handlePhotoChange}
+                          />
+                          <button
+                            onClick={() => photoInputRef.current?.click()}
+                            disabled={isUploadingPhoto}
+                            className="text-xs px-2 py-1 rounded-lg border transition-colors"
+                            style={{
+                              color: 'var(--color-info)',
+                              borderColor: 'var(--color-info)',
+                              background: 'transparent',
+                            }}
+                          >
+                            {isUploadingPhoto ? 'Subiendo…' : 'Cambiar foto'}
+                          </button>
+                        </div>
+
+                        {/* Datos */}
+                        <div className="flex-1 space-y-1 text-sm">
+                          {[
+                            { label: 'Nombre completo', value: `${enrollment.student?.first_name} ${enrollment.student?.last_name}${enrollment.student?.second_last_name ? ` ${enrollment.student.second_last_name}` : ''}` },
+                            { label: 'Matrícula', value: enrollment.matricula },
+                            { label: 'Programa', value: enrollment.program?.name },
+                            { label: 'Periodo', value: enrollment.period?.name },
+                          ].map((row) => (
+                            <p key={row.label} style={{ color: 'var(--text-secondary)' }}>
+                              <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{row.label}:</span>{' '}
+                              {row.value}
+                            </p>
+                          ))}
+                          <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
+                            Si hay algún error en tus datos, repórtalo en la oficina de Servicios Escolares antes de enviar.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Checkbox de confirmación */}
+                      <label className="flex items-start gap-3 mt-4 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={credDataConfirmed}
+                          onChange={(e) => setCredDataConfirmed(e.target.checked)}
+                          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                          Confirmo que mi fotografía y datos son correctos y deseo solicitar mi credencial estudiantil.
+                        </span>
+                      </label>
                     </div>
 
                     <Button
-                      onClick={() => {
-                        if (window.confirm('¿Confirmas que tus datos son correctos y deseas solicitar tu credencial?')) {
-                          requestCredentialMutation.mutate(activeConvocatoria.id);
-                        }
-                      }}
+                      onClick={() => requestCredentialMutation.mutate(activeConvocatoria.id)}
                       isLoading={requestCredentialMutation.isPending}
+                      disabled={!credDataConfirmed || requestCredentialMutation.isPending}
                     >
                       <Award size={16} className="mr-2" />
                       Solicitar Credencial

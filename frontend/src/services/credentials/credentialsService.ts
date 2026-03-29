@@ -70,6 +70,11 @@ export const credentialsService = {
     return res.data;
   },
 
+  closeConvocatoria: async (id: string): Promise<CredentialConvocatoria> => {
+    const res = await api.post(`/credentials/convocatorias/${id}/close/`);
+    return res.data;
+  },
+
   // ── Requests ───────────────────────────────────────────────────────────────
 
   getRequests: async (params?: Record<string, string>): Promise<CredentialRequest[]> => {

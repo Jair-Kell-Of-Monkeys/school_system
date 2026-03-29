@@ -176,6 +176,63 @@ class StudentViewSet(viewsets.ModelViewSet):
         serializer = StudentListSerializer(students, many=True)
         return Response(serializer.data)
     
+    @action(detail=False, methods=['get'], url_path='my-profile')
+    def my_profile(self, request):
+        """
+        Perfil del alumno actual.
+        GET /api/students/my-profile/
+        """
+        if not hasattr(request.user, 'student_profile'):
+            return Response(
+                {'error': 'No tiene perfil de estudiante.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        student = request.user.student_profile
+        serializer = StudentDetailSerializer(student, context={'request': request})
+        return Response(serializer.data)
+
+    @action(
+        detail=False,
+        methods=['post'],
+        url_path='upload-my-photo',
+        permission_classes=[IsAuthenticated],
+    )
+    def upload_my_photo(self, request):
+        """
+        El alumno sube su propia fotografía.
+        POST /api/students/upload-my-photo/
+        Body: multipart/form-data con campo 'photo'
+        """
+        if not hasattr(request.user, 'student_profile'):
+            return Response(
+                {'error': 'No tiene perfil de estudiante.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        student = request.user.student_profile
+        photo = request.FILES.get('photo')
+        if not photo:
+            return Response(
+                {'error': 'No se proporcionó ninguna imagen.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        allowed_types = {'image/jpeg', 'image/png', 'image/jpg'}
+        if photo.content_type not in allowed_types:
+            return Response(
+                {'error': 'Solo se aceptan imágenes JPG o PNG.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        max_size = 2 * 1024 * 1024  # 2 MB
+        if photo.size > max_size:
+            return Response(
+                {'error': 'La imagen no debe superar 2 MB.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        student.photo = photo
+        student.photo_status = 'pending'
+        student.save(update_fields=['photo', 'photo_status'])
+        photo_url = request.build_absolute_uri(student.photo.url) if student.photo else None
+        return Response({'photo_url': photo_url})
+
     @action(
         detail=False,
         methods=['get'],

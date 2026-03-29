@@ -42,7 +42,7 @@ class StudentListSerializer(serializers.ModelSerializer):
 
 class StudentDetailSerializer(serializers.ModelSerializer):
     """Serializer para detalles completos del estudiante"""
-    
+
     full_name = serializers.CharField(source='get_full_name', read_only=True)
     complete_address = serializers.CharField(
         source='get_complete_address',
@@ -51,7 +51,7 @@ class StudentDetailSerializer(serializers.ModelSerializer):
     user_email = serializers.EmailField(source='user.email', read_only=True)
     user_role = serializers.CharField(source='user.role', read_only=True)
     user_is_active = serializers.BooleanField(source='user.is_active', read_only=True)
-    
+
     photo_reviewed_by_name = serializers.SerializerMethodField()
     gender_display = serializers.CharField(source='get_gender_display', read_only=True)
     education_level_display = serializers.CharField(
@@ -62,14 +62,23 @@ class StudentDetailSerializer(serializers.ModelSerializer):
         source='get_photo_status_display',
         read_only=True
     )
-    
+    photo_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Student
         fields = '__all__'
-    
+
     def get_photo_reviewed_by_name(self, obj):
         if obj.photo_reviewed_by:
             return obj.photo_reviewed_by.email
+        return None
+
+    def get_photo_url(self, obj):
+        if obj.photo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.photo.url)
+            return obj.photo.url
         return None
 
 

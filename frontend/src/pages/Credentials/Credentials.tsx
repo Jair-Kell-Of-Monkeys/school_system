@@ -6,7 +6,7 @@ import { Button } from '@/components/atoms/Button/Button';
 import { Badge } from '@/components/atoms/Badge/Badge';
 import { credentialsService } from '@/services/credentials/credentialsService';
 import { aspirantService } from '@/services/aspirant/aspirantService';
-import { PlusCircle, Send, Calendar, FileText, X } from 'lucide-react';
+import { PlusCircle, Send, Calendar, FileText, X, Lock } from 'lucide-react';
 
 const statusBadgeVariant = (status: string): 'success' | 'danger' | 'warning' => {
   if (status === 'activa') return 'success';
@@ -14,9 +14,18 @@ const statusBadgeVariant = (status: string): 'success' | 'danger' | 'warning' =>
   return 'warning';
 };
 
+const STATUS_TABS = [
+  { key: 'all', label: 'Todas' },
+  { key: 'borrador', label: 'Borrador' },
+  { key: 'activa', label: 'Activas' },
+  { key: 'cerrada', label: 'Cerradas' },
+] as const;
+type TabKey = (typeof STATUS_TABS)[number]['key'];
+
 export const Credentials = () => {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<TabKey>('all');
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -30,6 +39,11 @@ export const Credentials = () => {
   const { data: convocatorias = [], isLoading } = useQuery({
     queryKey: ['credential-convocatorias-all'],
     queryFn: () => credentialsService.getConvocatorias(),
+  });
+
+  const { data: allRequests = [] } = useQuery({
+    queryKey: ['credential-requests-staff'],
+    queryFn: () => credentialsService.getRequests(),
   });
 
   const { data: periods = [] } = useQuery({
@@ -66,6 +80,14 @@ export const Credentials = () => {
     },
   });
 
+  const closeMutation = useMutation({
+    mutationFn: (id: string) => credentialsService.closeConvocatoria(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['credential-convocatorias-all'] });
+      queryClient.invalidateQueries({ queryKey: ['credential-requests-staff'] });
+    },
+  });
+
   const handleCreate = () => {
     if (!formData.title || !formData.period || !formData.fecha_inicio || !formData.fecha_fin) {
       setFormError('Completa todos los campos obligatorios.');
@@ -74,6 +96,13 @@ export const Credentials = () => {
     setFormError('');
     createMutation.mutate();
   };
+
+  // Global stats
+  const totalPending = allRequests.filter((r) => r.status === 'pendiente').length;
+  const totalGenerated = allRequests.filter((r) => r.status === 'generada').length;
+  const totalRequests = allRequests.length;
+
+  const filtered = statusFilter === 'all' ? convocatorias : convocatorias.filter((c) => c.status === statusFilter);
 
   if (isLoading) {
     return (
@@ -94,6 +123,20 @@ export const Credentials = () => {
           <PlusCircle size={18} className="mr-2" />
           Nueva Convocatoria
         </Button>
+      </div>
+
+      {/* Global stats */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: 'Total solicitudes', value: totalRequests, color: 'var(--text-primary)' },
+          { label: 'Pendientes', value: totalPending, color: 'var(--color-warning)' },
+          { label: 'Credenciales emitidas', value: totalGenerated, color: 'var(--color-success)' },
+        ].map((stat) => (
+          <Card key={stat.label} className="text-center py-3">
+            <p className="text-2xl font-bold" style={{ color: stat.color }}>{stat.value}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{stat.label}</p>
+          </Card>
+        ))}
       </div>
 
       {/* Modal de creación */}
@@ -209,62 +252,125 @@ export const Credentials = () => {
         </div>
       </Modal>
 
+      {/* Filter tabs */}
+      <div className="border-b" style={{ borderColor: 'var(--border)' }}>
+        <nav className="flex gap-1">
+          {STATUS_TABS.map((tab) => {
+            const count = tab.key === 'all'
+              ? convocatorias.length
+              : convocatorias.filter((c) => c.status === tab.key).length;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setStatusFilter(tab.key)}
+                className="py-2.5 px-4 text-sm font-medium border-b-2 transition-colors"
+                style={{
+                  borderColor: statusFilter === tab.key ? '#6366f1' : 'transparent',
+                  color: statusFilter === tab.key ? '#6366f1' : 'var(--text-secondary)',
+                }}
+              >
+                {tab.label}
+                {count > 0 && (
+                  <span
+                    className="ml-2 text-xs px-1.5 py-0.5 rounded-full"
+                    style={{
+                      background: statusFilter === tab.key ? '#eef2ff' : 'var(--bg-surface-2)',
+                      color: statusFilter === tab.key ? '#6366f1' : 'var(--text-muted)',
+                    }}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
       {/* Lista de convocatorias */}
-      {convocatorias.length === 0 ? (
+      {filtered.length === 0 ? (
         <Card>
           <div className="text-center py-12">
             <FileText className="mx-auto text-gray-300 mb-4" size={48} />
             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Sin convocatorias</h3>
-            <p className="text-gray-500 mt-1">Crea la primera convocatoria de credencialización.</p>
+            <p className="text-gray-500 mt-1">No hay convocatorias en esta categoría.</p>
           </div>
         </Card>
       ) : (
         <div className="space-y-4">
-          {convocatorias.map((conv) => (
-            <Card key={conv.id} className="hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">{conv.title}</h3>
-                    <Badge variant={statusBadgeVariant(conv.status)}>{conv.status_display}</Badge>
-                  </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                    <span className="font-medium">Periodo:</span> {conv.period_name}
-                  </p>
-                  <div className="flex items-center gap-4 text-sm text-gray-500">
-                    <span className="flex items-center gap-1">
-                      <Calendar size={14} />
-                      {conv.fecha_inicio} → {conv.fecha_fin}
-                    </span>
-                  </div>
-                  {conv.description && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">{conv.description}</p>
-                  )}
-                  {conv.requirements && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      <span className="font-medium">Requisitos foto:</span> {conv.requirements}
+          {filtered.map((conv) => {
+            const convRequests = allRequests.filter((r) => r.convocatoria === conv.id);
+            const convPending = convRequests.filter((r) => r.status === 'pendiente').length;
+            const convGenerated = convRequests.filter((r) => r.status === 'generada').length;
+
+            return (
+              <Card key={conv.id} className="hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="font-semibold text-gray-900 dark:text-gray-100">{conv.title}</h3>
+                      <Badge variant={statusBadgeVariant(conv.status)}>{conv.status_display}</Badge>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                      <span className="font-medium">Periodo:</span> {conv.period_name}
                     </p>
-                  )}
+                    <div className="flex items-center gap-4 text-sm text-gray-500">
+                      <span className="flex items-center gap-1">
+                        <Calendar size={14} />
+                        {conv.fecha_inicio} → {conv.fecha_fin}
+                      </span>
+                    </div>
+                    {convRequests.length > 0 && (
+                      <div className="flex gap-4 mt-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+                        <span>Total solicitudes: <strong>{convRequests.length}</strong></span>
+                        <span style={{ color: 'var(--color-warning)' }}>Pendientes: <strong>{convPending}</strong></span>
+                        <span style={{ color: 'var(--color-success)' }}>Emitidas: <strong>{convGenerated}</strong></span>
+                      </div>
+                    )}
+                    {conv.description && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">{conv.description}</p>
+                    )}
+                    {conv.requirements && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        <span className="font-medium">Requisitos foto:</span> {conv.requirements}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex-shrink-0 flex flex-col gap-2">
+                    {conv.status === 'borrador' && (
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          if (window.confirm('¿Publicar esta convocatoria? Los alumnos podrán verla y enviar solicitudes.')) {
+                            publishMutation.mutate(conv.id);
+                          }
+                        }}
+                        isLoading={publishMutation.isPending}
+                      >
+                        <Send size={16} className="mr-1" />
+                        Publicar
+                      </Button>
+                    )}
+                    {conv.status === 'activa' && (
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        onClick={() => {
+                          if (window.confirm('¿Cerrar esta convocatoria? No se aceptarán nuevas solicitudes.')) {
+                            closeMutation.mutate(conv.id);
+                          }
+                        }}
+                        isLoading={closeMutation.isPending}
+                      >
+                        <Lock size={16} className="mr-1" />
+                        Cerrar
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex-shrink-0">
-                  {conv.status === 'borrador' && (
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        if (window.confirm('¿Publicar esta convocatoria? Los alumnos podrán verla y enviar solicitudes.')) {
-                          publishMutation.mutate(conv.id);
-                        }
-                      }}
-                      isLoading={publishMutation.isPending}
-                    >
-                      <Send size={16} className="mr-1" />
-                      Publicar
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

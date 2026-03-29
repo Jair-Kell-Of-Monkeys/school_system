@@ -20,6 +20,22 @@ export const studentsService = {
     return response.data;
   },
 
+  // Perfil del alumno actual
+  async getMyProfile(): Promise<Student> {
+    const response = await axios.get('/students/my-profile/');
+    return response.data;
+  },
+
+  // El alumno sube su propia foto
+  async uploadMyPhoto(file: File): Promise<{ photo_url: string }> {
+    const formData = new FormData();
+    formData.append('photo', file);
+    const response = await axios.post('/students/upload-my-photo/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
   // Estadísticas
   async getStats(): Promise<any> {
     const response = await axios.get('/students/stats/');

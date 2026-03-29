@@ -72,6 +72,7 @@ export interface Student {
   user: string;
   first_name: string;
   last_name: string;
+  second_last_name?: string;
   curp: string;
   date_of_birth: string;
   gender: string;
@@ -81,6 +82,7 @@ export interface Student {
   city: string;
   state: string;
   photo_status: string;
+  photo_url: string | null;
   created_at: string;
 }
 
@@ -395,6 +397,7 @@ export interface EnrollmentDetail extends Enrollment {
     id: string;
     first_name: string;
     last_name: string;
+    second_last_name?: string;
     curp: string;
     email: string | null;
     user_email: string;

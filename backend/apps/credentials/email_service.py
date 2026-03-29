@@ -208,12 +208,19 @@ def send_credential_rejected_email(credential_request) -> bool:
                 por el siguiente motivo:
             </p>
             <div class="reason-box">
+                <p style="margin:0 0 6px 0;font-weight:bold;color:#991b1b;">Motivo del rechazo:</p>
                 <p style="margin:0; color:#991b1b;">{rejection_reason}</p>
             </div>
             <p style="color:#4b5563;">
-                Si tienes dudas, acude a la oficina de Servicios Escolares para más información.
+                <strong>¿Qué hacer ahora?</strong><br>
+                Corrige el problema indicado arriba y vuelve a ingresar a tu panel para actualizar
+                tu fotografía y enviar una nueva solicitud. Tu solicitud anterior fue rechazada,
+                por lo que podrás enviar una nueva sin problema.
             </p>
-            <a href="{frontend_url}/my-application" class="button">Ver mi solicitud</a>
+            <p style="color:#4b5563; font-size:13px;">
+                Si tienes dudas adicionales, acude a la oficina de Servicios Escolares.
+            </p>
+            <a href="{frontend_url}/my-application" class="button">Ir a mi panel y corregir</a>
         </div>
         <div class="footer">
             <p>Sistema Universitario — Servicios Escolares</p>

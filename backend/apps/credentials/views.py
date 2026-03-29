@@ -79,6 +79,26 @@ class CredentialConvocatoriaViewSet(viewsets.ModelViewSet):
         )
 
     @action(detail=True, methods=['post'], permission_classes=[IsAdminOrServiciosEscolares])
+    def close(self, request, pk=None):
+        """POST /api/credentials/convocatorias/{id}/close/"""
+        if request.user.role not in JEFE_ROLES:
+            return Response(
+                {'error': 'Solo el jefe de servicios escolares o admin puede cerrar convocatorias.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        convocatoria = self.get_object()
+        if convocatoria.status == 'cerrada':
+            return Response(
+                {'error': 'La convocatoria ya está cerrada.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        convocatoria.status = 'cerrada'
+        convocatoria.save(update_fields=['status', 'updated_at'])
+        return Response(
+            CredentialConvocatoriaListSerializer(convocatoria, context={'request': request}).data
+        )
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAdminOrServiciosEscolares])
     def publish(self, request, pk=None):
         """POST /api/credentials/convocatorias/{id}/publish/"""
         if request.user.role not in JEFE_ROLES:
