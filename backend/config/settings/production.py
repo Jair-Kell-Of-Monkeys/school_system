@@ -5,6 +5,15 @@ Requiere las variables de entorno definidas en .env.production.example
 """
 
 import os
+
+# Valores dummy para que base.py no falle al leer las variables de BD individuales.
+# En producción la BD real se configura abajo con DATABASE_URL via dj-database-url.
+os.environ.setdefault('DB_NAME', 'railway')
+os.environ.setdefault('DB_USER', 'postgres')
+os.environ.setdefault('DB_PASSWORD', 'dummy')
+os.environ.setdefault('DB_HOST', 'localhost')
+os.environ.setdefault('DB_PORT', '5432')
+
 import dj_database_url
 from .base import *
 
@@ -20,7 +29,7 @@ ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
 
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL'),
+        env='DATABASE_URL',
         conn_max_age=600,
         ssl_require=True,
     )
