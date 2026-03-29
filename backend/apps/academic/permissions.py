@@ -11,5 +11,5 @@ class IsAdminOrServiciosEscolares(permissions.BasePermission):
         return (
             request.user and
             request.user.is_authenticated and
-            request.user.role in ['admin', 'servicios_escolares']
+            request.user.role in ['admin', 'servicios_escolares', 'servicios_escolares_jefe']
         )

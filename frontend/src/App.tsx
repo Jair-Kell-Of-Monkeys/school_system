@@ -14,6 +14,8 @@ import { Enrollments } from '@/pages/Enrollments/Enrollments';
 import { ExamSessions } from '@/pages/ExamSessions/ExamSessions';
 import { Credentials } from '@/pages/Credentials/Credentials';
 import { CredentialRequests } from '@/pages/CredentialRequests/CredentialRequests';
+import { AcademicPeriods } from '@/pages/AcademicPeriods/AcademicPeriods';
+import { Announcements } from '@/pages/Announcements/Announcements';
 import { DashboardLayout } from '@/components/templates/DashboardLayout/DashboardLayout';
 import { MyApplication } from '@/pages/MyApplication/MyApplication';
 import { ProtectedRoute } from '@/components/organisms/ProtectedRoute/ProtectedRoute';
@@ -181,6 +183,30 @@ function App() {
               >
                 <DashboardLayout>
                   <CredentialRequests />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Periodos Académicos - Solo Jefa y Admin */}
+          <Route
+            path={ROUTES.PERIODS}
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.JEFE_SERVICIOS]}>
+                <DashboardLayout>
+                  <AcademicPeriods />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Convocatorias de Admisión - Solo Jefa y Admin */}
+          <Route
+            path={ROUTES.ANNOUNCEMENTS}
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.JEFE_SERVICIOS]}>
+                <DashboardLayout>
+                  <Announcements />
                 </DashboardLayout>
               </ProtectedRoute>
             }

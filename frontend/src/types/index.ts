@@ -34,6 +34,19 @@ export interface AcademicProgram {
   is_active: boolean;
 }
 
+export interface AcademicPeriod {
+  id: number;
+  name: string;
+  start_date: string;
+  end_date: string;
+  enrollment_start: string;
+  enrollment_end: string;
+  is_active: boolean;
+  is_enrollment_open: boolean;
+  is_current: boolean;
+  created_at: string;
+}
+
 export interface ProgramPermission {
   id: number;
   program: number;

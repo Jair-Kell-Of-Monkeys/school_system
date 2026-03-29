@@ -30,4 +30,5 @@ export const ROUTES = {
   STAFF: '/staff',
   ENROLLMENTS: '/enrollments',
   EXAM_SESSIONS: '/exam-sessions',
+  ANNOUNCEMENTS: '/announcements',
 } as const;

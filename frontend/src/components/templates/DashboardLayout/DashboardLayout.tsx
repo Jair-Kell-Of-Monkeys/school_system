@@ -7,7 +7,7 @@ import { useTheme } from '@/hooks/useTheme';
 import {
   Home, FileText, DollarSign, LogOut, Menu,
   UserCog, GraduationCap, BookOpen, ClipboardList,
-  Award, IdCard, Sun, Moon,
+  Award, IdCard, Sun, Moon, CalendarDays, Megaphone,
 } from 'lucide-react';
 
 interface DashboardLayoutProps {
@@ -34,6 +34,8 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     if (user?.role === ROLES.ADMIN || user?.role === ROLES.JEFE_SERVICIOS) {
       return [
         ...baseItems,
+        { icon: CalendarDays, label: 'Periodos Académicos',       path: ROUTES.PERIODS },
+        { icon: Megaphone,    label: 'Convocatorias de Admisión', path: ROUTES.ANNOUNCEMENTS },
         { icon: UserCog,      label: 'Encargados',                path: ROUTES.STAFF },
         { icon: GraduationCap,label: 'Estudiantes',               path: ROUTES.STUDENTS },
         { icon: FileText,     label: 'Pre-inscripciones',         path: ROUTES.PRE_ENROLLMENTS },
