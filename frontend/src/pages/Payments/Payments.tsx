@@ -6,7 +6,7 @@ import { Button } from '@/components/atoms/Button/Button';
 import { PaymentsTable } from '@/components/organisms/PaymentsTable/PaymentsTable';
 import { PaymentValidationModal } from '@/components/organisms/PaymentValidationModal/PaymentValidationModal';
 import { paymentsService } from '@/services/payments/paymentsService';
-import type { Payment, PaymentDetail } from '@/types';
+import type { Payment } from '@/types';
 import { DollarSign, Search, Clock, CheckCircle, XCircle, TrendingUp } from 'lucide-react';
 
 export const Payments = () => {
