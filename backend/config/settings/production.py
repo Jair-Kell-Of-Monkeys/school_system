@@ -60,11 +60,22 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # ─── CORS ────────────────────────────────────────────────────────────────────
 
-CORS_ALLOWED_ORIGINS = [
-    origin.strip()
-    for origin in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',')
-    if origin.strip()
-]
+import re as _re
+
+# Permite todos los subdominios de Vercel y el dominio principal del frontend.
+_frontend_url = os.environ.get('FRONTEND_URL', '').strip()
+
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.vercel\.app$",
+    r"^https://school-system.*\.vercel\.app$",
+] + (
+    # Si FRONTEND_URL es un dominio propio (no Vercel), añadirlo como origen exacto vía regex.
+    [r"^" + _re.escape(_frontend_url) + r"$"]
+    if _frontend_url and not _frontend_url.endswith('.vercel.app')
+    else []
+)
+
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
 
 # ─── HTTPS / Headers de seguridad ────────────────────────────────────────────
