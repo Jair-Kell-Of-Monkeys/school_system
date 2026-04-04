@@ -3,6 +3,8 @@
 Vistas para autenticación y gestión de usuarios.
 """
 
+import threading
+
 from rest_framework import viewsets, status, generics, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -72,13 +74,20 @@ class RegisterView(generics.CreateAPIView):
         }, status=status.HTTP_201_CREATED)
 
     @staticmethod
+    def _send_email_async(func, *args):
+        thread = threading.Thread(target=func, args=args)
+        thread.daemon = True
+        thread.start()
+
+    @staticmethod
     def _send_verification_email(user, token):
         try:
             from .tasks import send_verification_email_task
             send_verification_email_task.delay(user.email, token.token)
             return True
         except Exception:
-            return send_verification_email(user, token)
+            RegisterView._send_email_async(send_verification_email, user, token)
+            return True
 
 
 class VerifyEmailView(generics.GenericAPIView):
@@ -139,7 +148,9 @@ class VerifyEmailView(generics.GenericAPIView):
             from .tasks import send_welcome_email_task
             send_welcome_email_task.delay(user.email)
         except Exception:
-            send_welcome_email(user)
+            thread = threading.Thread(target=send_welcome_email, args=(user,))
+            thread.daemon = True
+            thread.start()
         
         # Generar tokens JWT para login automático
         refresh = RefreshToken.for_user(user)
@@ -195,7 +206,9 @@ class ResendVerificationEmailView(generics.GenericAPIView):
             from .tasks import send_verification_email_task
             send_verification_email_task.delay(user.email, token.token)
         except Exception:
-            send_verification_email(user, token)
+            thread = threading.Thread(target=send_verification_email, args=(user, token))
+            thread.daemon = True
+            thread.start()
 
         return Response({
             'message': 'Se envió un nuevo email de verificación.'
