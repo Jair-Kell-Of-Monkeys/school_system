@@ -1,11 +1,10 @@
+import mailtrap as mt
 from django.core.mail.backends.base import BaseEmailBackend
-import resend
 from django.conf import settings
 
 
-class ResendEmailBackend(BaseEmailBackend):
+class MailtrapSandboxBackend(BaseEmailBackend):
     def open(self):
-        resend.api_key = settings.RESEND_API_KEY
         return True
 
     def close(self):
@@ -15,6 +14,11 @@ class ResendEmailBackend(BaseEmailBackend):
         if not email_messages:
             return 0
         sent = 0
+        client = mt.MailtrapClient(
+            token=settings.MAILTRAP_API_TOKEN,
+            sandbox=True,
+            inbox_id=settings.MAILTRAP_INBOX_ID
+        )
         for message in email_messages:
             try:
                 html_body = None
@@ -22,15 +26,15 @@ class ResendEmailBackend(BaseEmailBackend):
                     if mimetype == 'text/html':
                         html_body = content
                         break
-                params = {
-                    "from": message.from_email,
-                    "to": message.to,
-                    "subject": message.subject,
-                    "text": message.body,
-                }
-                if html_body:
-                    params["html"] = html_body
-                resend.Emails.send(params)
+                mail = mt.Mail(
+                    sender=mt.Address(email="noreply@universidad.edu.mx",
+                                      name="Sistema Universitario"),
+                    to=[mt.Address(email=recipient) for recipient in message.to],
+                    subject=message.subject,
+                    text=message.body,
+                    html=html_body or message.body,
+                )
+                client.send(mail)
                 sent += 1
             except Exception as e:
                 if not self.fail_silently:

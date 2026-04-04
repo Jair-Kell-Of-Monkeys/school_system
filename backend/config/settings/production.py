@@ -90,8 +90,9 @@ SECURE_HSTS_PRELOAD = True
 
 # ─── Email (Resend HTTP API) ──────────────────────────────────────────────────
 
-EMAIL_BACKEND = 'apps.users.backends.resend_backend.ResendEmailBackend'
-RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+EMAIL_BACKEND = 'apps.users.backends.mailtrap_backend.MailtrapSandboxBackend'
+MAILTRAP_API_TOKEN = os.environ.get('MAILTRAP_API_TOKEN', '')
+MAILTRAP_INBOX_ID = int(os.environ.get('MAILTRAP_INBOX_ID', '0'))
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'onboarding@resend.dev')
 
 # ─── Celery ───────────────────────────────────────────────────────────────────
