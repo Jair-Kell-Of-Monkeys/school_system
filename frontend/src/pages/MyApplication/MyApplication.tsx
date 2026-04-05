@@ -309,6 +309,9 @@ export const MyApplication = () => {
     queryKey: ['my-application'],
     queryFn: aspirantService.getMyApplication,
     retry: false,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchInterval: 60_000,
   });
 
   const { data: programs = [] } = useQuery({
