@@ -30,6 +30,8 @@ DJANGO_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
+    'cloudinary_storage',
+    'cloudinary',
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',

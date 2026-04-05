@@ -36,3 +36,5 @@ vine==5.1.0
 wcwidth==0.5.3
 whitenoise==6.6.0
 mailtrap
+cloudinary
+django-cloudinary-storage
