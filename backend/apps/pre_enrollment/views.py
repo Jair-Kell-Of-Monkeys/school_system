@@ -717,7 +717,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
         # Actualizar automáticamente el estado de la pre-inscripción según documentos
         pre_enrollment = document.pre_enrollment
-        if pre_enrollment.status in ['submitted', 'under_review']:
+        if pre_enrollment.status in ['submitted', 'under_review', 'documents_rejected']:
             all_doc_statuses = list(
                 Document.objects.filter(pre_enrollment=pre_enrollment)
                 .values_list('status', flat=True)
@@ -733,12 +733,12 @@ class DocumentViewSet(viewsets.ModelViewSet):
                 except Exception:
                     from .email_service import send_all_documents_approved_email
                     send_all_documents_approved_email(pre_enrollment)
-            elif (any(s == 'rejected' for s in all_doc_statuses) and
-                  not any(s == 'pending' for s in all_doc_statuses)):
-                pre_enrollment.status = 'documents_rejected'
-                pre_enrollment.reviewed_at = timezone.now()
-                pre_enrollment.reviewed_by = request.user
-                pre_enrollment.save()
+            elif any(s == 'rejected' for s in all_doc_statuses):
+                if pre_enrollment.status != 'documents_rejected':
+                    pre_enrollment.status = 'documents_rejected'
+                    pre_enrollment.reviewed_at = timezone.now()
+                    pre_enrollment.reviewed_by = request.user
+                    pre_enrollment.save()
             elif pre_enrollment.status == 'submitted':
                 pre_enrollment.status = 'under_review'
                 pre_enrollment.reviewed_at = timezone.now()
