@@ -396,15 +396,21 @@ class CredentialDownloadView(APIView):
             )
 
         try:
-            pdf_url = credential.pdf_file.url
+            pdf_file = credential.pdf_file
+            pdf_file.open('rb')
+            content = pdf_file.read()
+            pdf_file.close()
         except Exception:
-            logger.exception('[download] Error obteniendo URL del PDF: credential=%s', credential_id)
+            logger.exception('[download] Error leyendo el PDF: credential=%s', credential_id)
             return Response(
-                {'error': 'No se pudo obtener la URL del archivo PDF.'},
+                {'error': 'No se pudo obtener el archivo PDF.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        return Response({'url': pdf_url})
+        matricula = credential.enrollment.matricula
+        response = HttpResponse(content, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="credencial-{matricula}.pdf"'
+        return response
 
 
 # ─── Verify (público) ─────────────────────────────────────────────────────────
