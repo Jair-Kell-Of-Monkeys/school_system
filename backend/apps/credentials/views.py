@@ -396,8 +396,9 @@ class CredentialDownloadView(APIView):
             )
 
         try:
-            with credential.pdf_file.open('rb') as f:
-                pdf_bytes = f.read()
+            import urllib.request
+            with urllib.request.urlopen(credential.pdf_file.url) as resp:
+                pdf_bytes = resp.read()
         except Exception:
             return Response(
                 {'error': 'No se pudo leer el archivo PDF.'},
