@@ -4,6 +4,7 @@ from django.db import models
 from apps.academic.models import AcademicPeriod
 from apps.enrollments.models import Enrollment
 from apps.users.models import User
+from core.storage import get_credential_pdf_storage
 
 
 class CredentialConvocatoria(models.Model):
@@ -164,6 +165,7 @@ class Credential(models.Model):
     )
     pdf_file = models.FileField(
         upload_to='credentials/pdf/%Y/%m/',
+        storage=get_credential_pdf_storage,  # raw/upload en Cloudinary, local en dev
         blank=True,
         null=True,
         verbose_name='Archivo PDF',

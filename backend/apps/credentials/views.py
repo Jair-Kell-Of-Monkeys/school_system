@@ -4,7 +4,7 @@ import logging
 
 from django.conf import settings
 from django.core.files.base import ContentFile
-from django.http import HttpResponse
+from django.http import FileResponse, HttpResponse
 from django.utils import timezone
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
@@ -396,10 +396,9 @@ class CredentialDownloadView(APIView):
             )
 
         try:
-            pdf_file = credential.pdf_file
-            pdf_file.open('rb')
-            content = pdf_file.read()
-            pdf_file.close()
+            credential.pdf_file.open('rb')
+            content = credential.pdf_file.read()
+            credential.pdf_file.close()
         except Exception:
             logger.exception('[download] Error leyendo el PDF: credential=%s', credential_id)
             return Response(
@@ -408,9 +407,12 @@ class CredentialDownloadView(APIView):
             )
 
         matricula = credential.enrollment.matricula
-        response = HttpResponse(content, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="credencial-{matricula}.pdf"'
-        return response
+        return FileResponse(
+            io.BytesIO(content),
+            content_type='application/pdf',
+            as_attachment=True,
+            filename=f'credencial-{matricula}.pdf',
+        )
 
 
 # ─── Verify (público) ─────────────────────────────────────────────────────────
