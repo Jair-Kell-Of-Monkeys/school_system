@@ -4,7 +4,7 @@ import logging
 
 from django.conf import settings
 from django.core.files.base import ContentFile
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.utils import timezone
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
@@ -396,21 +396,15 @@ class CredentialDownloadView(APIView):
             )
 
         try:
-            import urllib.request
-            with urllib.request.urlopen(credential.pdf_file.url) as resp:
-                pdf_bytes = resp.read()
+            pdf_url = credential.pdf_file.url
         except Exception:
+            logger.exception('[download] Error obteniendo URL del PDF: credential=%s', credential_id)
             return Response(
-                {'error': 'No se pudo leer el archivo PDF.'},
+                {'error': 'No se pudo obtener la URL del archivo PDF.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        matricula = credential.enrollment.matricula
-        response = HttpResponse(pdf_bytes, content_type='application/pdf')
-        response['Content-Disposition'] = (
-            f'attachment; filename="credencial-{matricula}.pdf"'
-        )
-        return response
+        return HttpResponseRedirect(pdf_url)
 
 
 # ─── Verify (público) ─────────────────────────────────────────────────────────
