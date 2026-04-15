@@ -4,7 +4,7 @@ import logging
 
 from django.conf import settings
 from django.core.files.base import ContentFile
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
@@ -404,7 +404,7 @@ class CredentialDownloadView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        return HttpResponseRedirect(pdf_url)
+        return Response({'url': pdf_url})
 
 
 # ─── Verify (público) ─────────────────────────────────────────────────────────

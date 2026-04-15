@@ -105,10 +105,17 @@ export const credentialsService = {
   // ── Download credential PDF ────────────────────────────────────────────────
 
   downloadCredential: async (credentialId: string, matricula: string): Promise<void> => {
-    const res = await api.get(`/credentials/${credentialId}/download/`, {
-      responseType: 'blob',
-    });
-    const url = window.URL.createObjectURL(new Blob([res.data]));
+    // Step 1: authenticated call to get the Cloudinary URL
+    const res = await api.get(`/credentials/${credentialId}/download/`);
+    const pdfUrl: string = res.data.url;
+
+    // Step 2: download the file via plain fetch (no JWT header) to avoid
+    // Cloudinary rejecting the request with 401
+    const fileRes = await fetch(pdfUrl);
+    if (!fileRes.ok) throw new Error('No se pudo descargar el PDF de la credencial.');
+    const blob = await fileRes.blob();
+
+    const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', `credencial-${matricula}.pdf`);
