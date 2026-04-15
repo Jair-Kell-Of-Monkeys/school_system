@@ -4,7 +4,7 @@ import logging
 
 from django.conf import settings
 from django.core.files.base import ContentFile
-from django.http import FileResponse, HttpResponse
+from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
@@ -369,7 +369,8 @@ class CredentialRequestViewSet(viewsets.ModelViewSet):
 class CredentialDownloadView(APIView):
     """
     GET /api/credentials/{credential_id}/download/
-    Descarga el PDF de la credencial. Accesible por el dueño o staff.
+    Genera y descarga el PDF de la credencial on-the-fly (igual que pagos/inscripciones).
+    Accesible por el dueño o staff.
     """
     permission_classes = [IsAuthenticated]
 
@@ -389,30 +390,39 @@ class CredentialDownloadView(APIView):
             ):
                 return Response({'error': 'Sin permiso.'}, status=status.HTTP_403_FORBIDDEN)
 
-        if not credential.pdf_file:
+        # Obtener la solicitud aprobada para regenerar el PDF desde la DB
+        credential_request = (
+            CredentialRequest.objects
+            .filter(enrollment=credential.enrollment, status='generada')
+            .select_related(
+                'enrollment__student',
+                'enrollment__program',
+                'enrollment__period',
+            )
+            .first()
+        )
+        if not credential_request:
             return Response(
                 {'error': 'El PDF de la credencial aún no está disponible.'},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
         try:
-            credential.pdf_file.open('rb')
-            content = credential.pdf_file.read()
-            credential.pdf_file.close()
+            from .generators import generate_credential_pdf
+            pdf_bytes = generate_credential_pdf(credential_request)
         except Exception:
-            logger.exception('[download] Error leyendo el PDF: credential=%s', credential_id)
+            logger.exception('[download] Error generando PDF: credential=%s', credential_id)
             return Response(
-                {'error': 'No se pudo obtener el archivo PDF.'},
+                {'error': 'Error al generar el PDF de la credencial.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
         matricula = credential.enrollment.matricula
-        return FileResponse(
-            io.BytesIO(content),
-            content_type='application/pdf',
-            as_attachment=True,
-            filename=f'credencial-{matricula}.pdf',
-        )
+        buffer = io.BytesIO(pdf_bytes)
+        buffer.seek(0)
+        response = HttpResponse(buffer, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="credencial-{matricula}.pdf"'
+        return response
 
 
 # ─── Verify (público) ─────────────────────────────────────────────────────────
