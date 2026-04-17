@@ -419,5 +419,6 @@ export interface EnrollmentDetail extends Enrollment {
   group: string | null;
   schedule: string | null;
   documents: EnrollmentDocument[];
+  credential_status: string | null;
   updated_at: string;
 }

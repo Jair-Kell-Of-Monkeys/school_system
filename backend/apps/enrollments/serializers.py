@@ -123,6 +123,13 @@ class EnrollmentDetailSerializer(serializers.ModelSerializer):
     program_name = serializers.CharField(source='program.name', read_only=True)
     program_code = serializers.CharField(source='program.code', read_only=True)
     period_name = serializers.CharField(source='period.name', read_only=True)
+    credential_status = serializers.SerializerMethodField()
+
+    def get_credential_status(self, obj):
+        from apps.credentials.models import CredentialRequest
+        return CredentialRequest.objects.filter(
+            enrollment=obj
+        ).values_list('status', flat=True).first()
 
     class Meta:
         model = Enrollment
@@ -145,6 +152,7 @@ class EnrollmentDetailSerializer(serializers.ModelSerializer):
             'institutional_email',
             'enrolled_at',
             'documents',
+            'credential_status',
             'created_at',
             'updated_at',
         ]

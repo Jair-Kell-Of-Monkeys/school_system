@@ -42,6 +42,7 @@ const PROCESS_STEPS = [
 
 function getActiveStep(app: MyApplication | null, enrollment: EnrollmentDetail | null): number {
   if (enrollment) {
+    if (enrollment.credential_status === 'generada') return 7;
     if (['enrolled', 'active'].includes(enrollment.status)) return 6;
     if (enrollment.status === 'pending_docs') return 5;
   }
