@@ -41,21 +41,41 @@ User = get_user_model()
 # para evitar duplicación; serializers.py lo mantiene inline por compatibilidad.
 CURP_RE = r'^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$'
 
-# Tabla de valores para el algoritmo Módulo 10 de RENAPO.
-# '0'-'9' → 0-9 | 'A'-'Z' → 10-35  (la CURP no usa Ñ, por eso O=24 sin salto).
-_CURP_CHAR_VALUE = {c: i for i, c in enumerate('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ')}
+# Tabla oficial SEGOB/RENAPO (DOF). Ñ ocupa la posición 24 en el alfabeto
+# español; no aparece en CURPs pero su posición desplaza O y las siguientes.
+# Esto hace O=25, P=26, …, Z=36 (36 valores en total para A-Z, saltando la 24).
+_CURP_CHAR_VALUE = {
+    '0':  0, '1':  1, '2':  2, '3':  3, '4':  4,
+    '5':  5, '6':  6, '7':  7, '8':  8, '9':  9,
+    'A': 10, 'B': 11, 'C': 12, 'D': 13, 'E': 14,
+    'F': 15, 'G': 16, 'H': 17, 'I': 18, 'J': 19,
+    'K': 20, 'L': 21, 'M': 22, 'N': 23,
+    # posición 24 reservada para Ñ en la tabla SEGOB — desplaza O en adelante
+    'O': 25, 'P': 26, 'Q': 27, 'R': 28, 'S': 29,
+    'T': 30, 'U': 31, 'V': 32, 'W': 33, 'X': 34,
+    'Y': 35, 'Z': 36,
+}
+
+_CURP_WEIGHTS = [18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2]
 
 
 def _verify_curp_check_digit(curp: str) -> bool:
     """
-    Valida el dígito verificador (posición 18) de la CURP usando el
-    algoritmo oficial de RENAPO (Módulo 10).
+    Valida el dígito verificador (posición 18) mediante el algoritmo
+    oficial Módulo 10 de SEGOB/RENAPO.
 
-    Pesos posicionales: 18 para la posición 0, decreciendo hasta 2 para la 16.
-    Dígito esperado = (10 − (suma % 10)) % 10
+    Suma_Total = Σ valor_carácter[i] × peso[i]  para i = 0…16
+    Dígito_esperado = abs(10 − Suma_Total % 10) % 10
+
+    El segundo % 10 es obligatorio: cuando el residuo es 0,
+    abs(10 − 0) = 10, y 10 % 10 = 0 (evita retornar 10 como dígito válido).
+
+    Verificado:
+        MIJJ030410HNELSRA0  →  suma=2090, residuo=0, dígito=0  ✓
+        BADD110313HCMLNS00  →  suma=1504, residuo=4, dígito_esp=6 ≠ 0  →  rechazada  ✓
     """
-    total = sum(_CURP_CHAR_VALUE[c] * (18 - i) for i, c in enumerate(curp[:17]))
-    expected = (10 - (total % 10)) % 10
+    total = sum(_CURP_CHAR_VALUE[c] * w for c, w in zip(curp[:17], _CURP_WEIGHTS))
+    expected = abs(10 - (total % 10)) % 10
     return int(curp[17]) == expected
 
 
