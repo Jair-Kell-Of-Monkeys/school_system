@@ -1,5 +1,5 @@
 import axios from '../api/axios';
-import type { LoginCredentials, AuthTokens, User, RegisterData } from '@/types';
+import type { LoginCredentials, AuthTokens, User, RegisterData, CurpLookupResult } from '@/types';
 
 export const authService = {
   async login(credentials: LoginCredentials): Promise<{ user: User; tokens: AuthTokens }> {
@@ -38,6 +38,11 @@ export const authService = {
 
   async resendVerification(email: string): Promise<{ message: string }> {
     const response = await axios.post('/users/resend-verification/', { email });
+    return response.data;
+  },
+
+  async lookupCurp(curp: string): Promise<CurpLookupResult> {
+    const response = await axios.get(`/users/curp-lookup/?curp=${encodeURIComponent(curp)}`);
     return response.data;
   },
 };

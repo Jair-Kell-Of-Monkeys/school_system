@@ -3,6 +3,7 @@
 Vistas para autenticación y gestión de usuarios.
 """
 
+import re
 import threading
 
 from rest_framework import viewsets, status, generics, filters
@@ -35,6 +36,10 @@ from core.permissions import IsAdmin
 
 
 User = get_user_model()
+
+# Mismo patrón que RegisterSerializer.validate_curp — definido aquí una sola vez
+# para evitar duplicación; serializers.py lo mantiene inline por compatibilidad.
+CURP_RE = r'^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$'
 
 
 # ============================================================================
@@ -415,6 +420,83 @@ class CheckEmailView(generics.GenericAPIView):
             'exists': exists,
             'available': not exists
         })
+
+
+# ============================================================================
+# CONSULTA DE CURP
+# ============================================================================
+
+def _fetch_curp_data(curp: str) -> dict:
+    """
+    Retorna datos personales asociados a una CURP.
+
+    TODO: Integrar con la API oficial de RENAPO o un proveedor autorizado
+          (requiere convenio/credenciales con la institución).
+          Opciones evaluadas:
+          - https://api.renapo.gob.mx  — requiere contrato RENAPO
+          - https://curp.com.mx/api/   — tercero no oficial, no recomendado en producción
+
+    Por ahora, extrae fecha de nacimiento y sexo directamente de la estructura
+    del CURP (datos reales y deterministas) y devuelve nombres de prueba para
+    que el flujo de autofill en el frontend sea completamente verificable.
+    """
+    import datetime
+
+    year_int = int(curp[4:6])
+    month_str = curp[6:8]
+    day_str = curp[8:10]
+    sex_char = curp[10]  # H = Hombre, M = Mujer
+
+    # Determinación de siglo: YY <= dos últimos dígitos del año actual → 2000s
+    current_2d = datetime.date.today().year % 100
+    year_full = 2000 + year_int if year_int <= current_2d else 1900 + year_int
+
+    return {
+        'first_name': 'NOMBRE',         # TODO: dato real de API externa
+        'last_name': 'APELLIDO',        # TODO: dato real de API externa
+        'second_last_name': 'MATERNO',  # TODO: dato real de API externa
+        'date_of_birth': f'{year_full}-{month_str}-{day_str}',
+        'gender': 'masculino' if sex_char == 'H' else 'femenino',
+    }
+
+
+class CurpLookupView(generics.GenericAPIView):
+    """
+    Consulta datos personales a partir de una CURP válida.
+
+    Endpoint: GET /api/users/curp-lookup/?curp=XXXX
+    Acceso: público (AllowAny) — se usa antes del registro del usuario.
+
+    Respuesta 200:
+        { first_name, last_name, second_last_name, date_of_birth, gender }
+    Respuesta 400: CURP ausente o con formato inválido.
+    Respuesta 404: CURP no encontrada en el servicio externo.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        curp = request.query_params.get('curp', '').upper().strip()
+
+        if not curp:
+            return Response(
+                {'error': 'El parámetro curp es requerido'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not re.match(CURP_RE, curp):
+            return Response(
+                {'error': 'Formato de CURP inválido'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        data = _fetch_curp_data(curp)
+        if data is None:
+            return Response(
+                {'error': 'No se encontraron datos para esta CURP'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        return Response(data)
 
 
 # ============================================================================

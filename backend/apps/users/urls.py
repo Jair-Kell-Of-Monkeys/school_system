@@ -19,6 +19,7 @@ from .views import (
     ChangePasswordView,
     UserViewSet,
     CheckEmailView,
+    CurpLookupView,
     ServiciosEscolaresManagementViewSet,
     VerifyEmailView,
     ResendVerificationEmailView,
@@ -82,6 +83,10 @@ urlpatterns = [
     # Verificar disponibilidad de email
     # POST /api/users/check-email/
     path('check-email/', CheckEmailView.as_view(), name='check-email'),
+
+    # Consultar datos de una CURP (autofill en registro)
+    # GET /api/users/curp-lookup/?curp=XXXX
+    path('curp-lookup/', CurpLookupView.as_view(), name='curp-lookup'),
     path('verify-email/', VerifyEmailView.as_view(), name='verify-email'),
     path('resend-verification/', ResendVerificationEmailView.as_view(), name='resend-verification'),
     

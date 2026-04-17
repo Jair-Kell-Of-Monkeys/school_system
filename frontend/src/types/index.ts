@@ -392,6 +392,14 @@ export interface CredentialRequest {
   updated_at: string;
 }
 
+export interface CurpLookupResult {
+  first_name: string;
+  last_name: string;
+  second_last_name: string;
+  date_of_birth: string;  // YYYY-MM-DD
+  gender: 'masculino' | 'femenino';
+}
+
 export interface EnrollmentDetail extends Enrollment {
   student: {
     id: string;

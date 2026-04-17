@@ -12,20 +12,22 @@ import {
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 const GENDER_OPTIONS = [
-  { value: 'masculino',        label: 'Masculino' },
-  { value: 'femenino',         label: 'Femenino' },
-  { value: 'otro',             label: 'Otro' },
-  { value: 'prefiero_no_decir',label: 'Prefiero no decir' },
+  { value: 'masculino',         label: 'Masculino' },
+  { value: 'femenino',          label: 'Femenino' },
+  { value: 'otro',              label: 'Otro' },
+  { value: 'prefiero_no_decir', label: 'Prefiero no decir' },
 ];
+
+const CURP_REGEX = /^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/i;
 
 function passwordStrength(pw: string): { score: number; label: string; color: string } {
   if (!pw) return { score: 0, label: '', color: '' };
   let score = 0;
-  if (pw.length >= 8)  score++;
-  if (pw.length >= 12) score++;
-  if (/[A-Z]/.test(pw)) score++;
-  if (/[0-9]/.test(pw)) score++;
-  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  if (pw.length >= 8)           score++;
+  if (pw.length >= 12)          score++;
+  if (/[A-Z]/.test(pw))         score++;
+  if (/[0-9]/.test(pw))         score++;
+  if (/[^A-Za-z0-9]/.test(pw))  score++;
 
   if (score <= 1) return { score, label: 'Muy débil',  color: '#ef4444' };
   if (score === 2) return { score, label: 'Débil',      color: '#f97316' };
@@ -45,6 +47,7 @@ interface AuthFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 const AuthField = ({ label, error, icon, rightSlot, id, ...props }: AuthFieldProps) => {
   const fieldId = id || label.toLowerCase().replace(/\s+/g, '-');
+  const isReadOnly = !!props.readOnly;
   return (
     <div>
       <label
@@ -69,9 +72,16 @@ const AuthField = ({ label, error, icon, rightSlot, id, ...props }: AuthFieldPro
           style={{
             paddingLeft: icon ? '2.5rem' : '0.75rem',
             paddingRight: rightSlot ? '2.5rem' : '0.75rem',
-            background: 'var(--bg-surface-2)',
-            border: `1.5px solid ${error ? '#f87171' : 'var(--border)'}`,
+            background: isReadOnly ? 'var(--bg-surface-3)' : 'var(--bg-surface-2)',
+            border: `1.5px solid ${
+              error
+                ? '#f87171'
+                : isReadOnly
+                ? 'var(--color-success-border)'
+                : 'var(--border)'
+            }`,
             color: 'var(--text-primary)',
+            cursor: isReadOnly ? 'default' : undefined,
           }}
           {...props}
         />
@@ -98,6 +108,7 @@ interface SelectFieldProps extends React.SelectHTMLAttributes<HTMLSelectElement>
 
 const SelectField = ({ label, error, id, children, ...props }: SelectFieldProps) => {
   const fieldId = id || label.toLowerCase().replace(/\s+/g, '-');
+  const isDisabled = !!props.disabled;
   return (
     <div>
       <label
@@ -111,9 +122,17 @@ const SelectField = ({ label, error, id, children, ...props }: SelectFieldProps)
         id={fieldId}
         className="block w-full px-3 py-2.5 rounded-xl text-sm transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 appearance-none"
         style={{
-          background: 'var(--bg-surface-2)',
-          border: `1.5px solid ${error ? '#f87171' : 'var(--border)'}`,
+          background: isDisabled ? 'var(--bg-surface-3)' : 'var(--bg-surface-2)',
+          border: `1.5px solid ${
+            error
+              ? '#f87171'
+              : isDisabled
+              ? 'var(--color-success-border)'
+              : 'var(--border)'
+          }`,
           color: 'var(--text-primary)',
+          cursor: isDisabled ? 'default' : undefined,
+          opacity: 1,  // Neutralizar opacidad del navegador en estado disabled
         }}
         {...props}
       >
@@ -142,6 +161,8 @@ const SectionTitle = ({ label }: { label: string }) => (
 
 // ── RegisterForm ───────────────────────────────────────────────────────────
 
+type CurpLookupState = 'idle' | 'loading' | 'success' | 'error';
+
 export const RegisterForm = () => {
   const navigate = useNavigate();
   const [serverError, setServerError] = useState('');
@@ -149,16 +170,58 @@ export const RegisterForm = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [curpLookupState, setCurpLookupState] = useState<CurpLookupState>('idle');
+  const [curpAutoFilled, setCurpAutoFilled] = useState(false);
 
   const {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<RegisterData>();
 
   const password = watch('password') || '';
   const strength = passwordStrength(password);
+
+  // ── CURP autofill helpers ───────────────────────────────────────────────
+
+  const clearAutoFill = () => {
+    setCurpAutoFilled(false);
+    setCurpLookupState('idle');
+    setValue('first_name', '', { shouldValidate: false });
+    setValue('last_name', '', { shouldValidate: false });
+    setValue('second_last_name', '');
+    setValue('date_of_birth', '', { shouldValidate: false });
+    setValue('gender', '', { shouldValidate: false });
+  };
+
+  const handleCurpBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
+    // Leer el valor antes de cualquier await (el evento sintético puede limpiarse)
+    const curpValue = e.target.value.toUpperCase();
+
+    // No relanzar si ya está en proceso o ya se autollenó con esta CURP
+    if (curpAutoFilled || curpLookupState === 'loading') return;
+
+    // Solo consultar si el formato es válido
+    if (!CURP_REGEX.test(curpValue)) return;
+
+    setCurpLookupState('loading');
+    try {
+      const data = await authService.lookupCurp(curpValue);
+      setValue('first_name', data.first_name, { shouldValidate: true, shouldDirty: true });
+      setValue('last_name', data.last_name, { shouldValidate: true, shouldDirty: true });
+      setValue('second_last_name', data.second_last_name ?? '');
+      setValue('date_of_birth', data.date_of_birth, { shouldValidate: true, shouldDirty: true });
+      setValue('gender', data.gender, { shouldValidate: true, shouldDirty: true });
+      setCurpAutoFilled(true);
+      setCurpLookupState('success');
+    } catch {
+      setCurpLookupState('error');
+    }
+  };
+
+  // ── Submit ──────────────────────────────────────────────────────────────
 
   const onSubmit = async (data: RegisterData) => {
     try {
@@ -212,6 +275,18 @@ export const RegisterForm = () => {
     );
   }
 
+  // ── CURP field registration (extraído para poder mezclar handlers) ──────
+
+  const curpFieldProps = register('curp', {
+    required: 'La CURP es requerida',
+    pattern: {
+      value: CURP_REGEX,
+      message: 'CURP inválida (18 caracteres)',
+    },
+    minLength: { value: 18, message: 'La CURP tiene 18 caracteres' },
+    maxLength: { value: 18, message: 'La CURP tiene 18 caracteres' },
+  });
+
   // ── Main form ──────────────────────────────────────────────────────────
 
   return (
@@ -239,61 +314,109 @@ export const RegisterForm = () => {
         <section>
           <SectionTitle label="Datos personales" />
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <AuthField
-                label="Nombre(s)"
-                icon={<User size={14} />}
-                error={errors.first_name?.message}
-                {...register('first_name', { required: 'El nombre es requerido' })}
-              />
-              <AuthField
-                label="Apellido Paterno"
-                icon={<User size={14} />}
-                error={errors.last_name?.message}
-                {...register('last_name', { required: 'El apellido es requerido' })}
-              />
-            </div>
-            <AuthField
-              label="Apellido Materno (opcional)"
-              icon={<User size={14} />}
-              error={errors.second_last_name?.message}
-              {...register('second_last_name')}
-            />
-            <div className="grid grid-cols-2 gap-3">
+
+            {/* CURP — primer campo: al llenarse dispara el autofill */}
+            <div>
               <AuthField
                 label="CURP"
                 placeholder="AAAA000000XAAAAX0"
                 className="uppercase"
                 icon={<CreditCard size={14} />}
                 error={errors.curp?.message}
-                {...register('curp', {
-                  required: 'La CURP es requerida',
-                  pattern: {
-                    value: /^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/i,
-                    message: 'CURP inválida (18 caracteres)',
-                  },
-                  minLength: { value: 18, message: 'La CURP tiene 18 caracteres' },
-                  maxLength: { value: 18, message: 'La CURP tiene 18 caracteres' },
-                })}
+                rightSlot={
+                  curpLookupState === 'loading' ? (
+                    <span className="w-3.5 h-3.5 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin inline-block" />
+                  ) : curpLookupState === 'success' ? (
+                    <CheckCircle size={14} style={{ color: 'var(--color-success)' }} />
+                  ) : curpLookupState === 'error' ? (
+                    <AlertCircle size={14} style={{ color: 'var(--color-danger)' }} />
+                  ) : null
+                }
+                {...curpFieldProps}
+                onChange={(e) => {
+                  curpFieldProps.onChange(e);
+                  // Si el usuario edita la CURP tras un autofill, limpiar los campos
+                  if (curpAutoFilled) clearAutoFill();
+                }}
+                onBlur={async (e) => {
+                  curpFieldProps.onBlur(e);   // Validación de react-hook-form
+                  await handleCurpBlur(e);    // Consulta a la API
+                }}
               />
+
+              {/* Indicador de resultado bajo el campo CURP */}
+              {curpLookupState === 'success' && (
+                <div className="mt-1.5 flex items-center justify-between">
+                  <p className="text-xs flex items-center gap-1" style={{ color: 'var(--color-success)' }}>
+                    <CheckCircle size={11} />
+                    Datos obtenidos automáticamente
+                  </p>
+                  <button
+                    type="button"
+                    className="text-xs underline"
+                    style={{ color: 'var(--text-muted)' }}
+                    onClick={clearAutoFill}
+                  >
+                    Editar manualmente
+                  </button>
+                </div>
+              )}
+              {curpLookupState === 'error' && (
+                <p className="mt-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
+                  No se encontraron datos. Completa los campos manualmente.
+                </p>
+              )}
+            </div>
+
+            {/* Nombre y apellido paterno */}
+            <div className="grid grid-cols-2 gap-3">
+              <AuthField
+                label="Nombre(s)"
+                icon={<User size={14} />}
+                error={errors.first_name?.message}
+                readOnly={curpAutoFilled}
+                {...register('first_name', { required: 'El nombre es requerido' })}
+              />
+              <AuthField
+                label="Apellido Paterno"
+                icon={<User size={14} />}
+                error={errors.last_name?.message}
+                readOnly={curpAutoFilled}
+                {...register('last_name', { required: 'El apellido es requerido' })}
+              />
+            </div>
+
+            <AuthField
+              label="Apellido Materno (opcional)"
+              icon={<User size={14} />}
+              error={errors.second_last_name?.message}
+              readOnly={curpAutoFilled}
+              {...register('second_last_name')}
+            />
+
+            {/* Fecha de nacimiento y género */}
+            <div className="grid grid-cols-2 gap-3">
               <AuthField
                 label="Fecha de Nacimiento"
                 type="date"
                 icon={<Calendar size={14} />}
                 error={errors.date_of_birth?.message}
+                readOnly={curpAutoFilled}
                 {...register('date_of_birth', { required: 'La fecha de nacimiento es requerida' })}
               />
+              <SelectField
+                label="Género"
+                error={errors.gender?.message}
+                disabled={curpAutoFilled}
+                {...register('gender', { required: 'El género es requerido' })}
+              >
+                <option value="">Selecciona…</option>
+                {GENDER_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </SelectField>
             </div>
-            <SelectField
-              label="Género"
-              error={errors.gender?.message}
-              {...register('gender', { required: 'El género es requerido' })}
-            >
-              <option value="">Selecciona…</option>
-              {GENDER_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </SelectField>
+
           </div>
         </section>
 
@@ -441,13 +564,17 @@ export const RegisterForm = () => {
         {/* Submit */}
         <button
           type="submit"
-          disabled={isLoading}
+          disabled={isLoading || curpLookupState === 'loading'}
           className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-150 flex items-center justify-center gap-2"
           style={{
-            background: isLoading
-              ? 'rgba(99,102,241,0.6)'
-              : 'linear-gradient(135deg, #4f46e5, #6366f1)',
-            boxShadow: isLoading ? 'none' : '0 4px 14px rgba(99,102,241,0.35)',
+            background:
+              isLoading || curpLookupState === 'loading'
+                ? 'rgba(99,102,241,0.6)'
+                : 'linear-gradient(135deg, #4f46e5, #6366f1)',
+            boxShadow:
+              isLoading || curpLookupState === 'loading'
+                ? 'none'
+                : '0 4px 14px rgba(99,102,241,0.35)',
           }}
         >
           {isLoading && (
