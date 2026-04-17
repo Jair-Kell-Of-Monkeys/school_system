@@ -41,6 +41,23 @@ User = get_user_model()
 # para evitar duplicación; serializers.py lo mantiene inline por compatibilidad.
 CURP_RE = r'^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$'
 
+# Tabla de valores para el algoritmo Módulo 10 de RENAPO.
+# '0'-'9' → 0-9 | 'A'-'Z' → 10-35  (la CURP no usa Ñ, por eso O=24 sin salto).
+_CURP_CHAR_VALUE = {c: i for i, c in enumerate('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ')}
+
+
+def _verify_curp_check_digit(curp: str) -> bool:
+    """
+    Valida el dígito verificador (posición 18) de la CURP usando el
+    algoritmo oficial de RENAPO (Módulo 10).
+
+    Pesos posicionales: 18 para la posición 0, decreciendo hasta 2 para la 16.
+    Dígito esperado = (10 − (suma % 10)) % 10
+    """
+    total = sum(_CURP_CHAR_VALUE[c] * (18 - i) for i, c in enumerate(curp[:17]))
+    expected = (10 - (total % 10)) % 10
+    return int(curp[17]) == expected
+
 
 # ============================================================================
 # VISTAS DE AUTENTICACIÓN
@@ -486,6 +503,12 @@ class CurpLookupView(generics.GenericAPIView):
         if not re.match(CURP_RE, curp):
             return Response(
                 {'error': 'Formato de CURP inválido'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not _verify_curp_check_digit(curp):
+            return Response(
+                {'error': 'La CURP no es válida (falla de verificación oficial)'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

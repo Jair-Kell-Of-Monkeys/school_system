@@ -321,6 +321,7 @@ export const RegisterForm = () => {
                 label="CURP"
                 placeholder="AAAA000000XAAAAX0"
                 className="uppercase"
+                maxLength={18}
                 icon={<CreditCard size={14} />}
                 error={errors.curp?.message}
                 rightSlot={
