@@ -5,7 +5,7 @@ from .views import (
     CredentialConvocatoriaViewSet,
     CredentialRequestViewSet,
     CredentialDownloadView,
-    CredentialVerifyView,
+    VerifyCredentialView,
 )
 
 router = DefaultRouter()
@@ -15,5 +15,5 @@ router.register('requests', CredentialRequestViewSet, basename='credential-reque
 urlpatterns = [
     path('', include(router.urls)),
     path('<uuid:credential_id>/download/', CredentialDownloadView.as_view(), name='credential-download'),
-    path('verify/<str:matricula>/', CredentialVerifyView.as_view(), name='credential-verify'),
+    path('verify/<str:matricula>/', VerifyCredentialView.as_view(), name='credential-verify'),
 ]

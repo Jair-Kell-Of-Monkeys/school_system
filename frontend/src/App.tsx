@@ -14,6 +14,7 @@ import { Enrollments } from '@/pages/Enrollments/Enrollments';
 import { ExamSessions } from '@/pages/ExamSessions/ExamSessions';
 import { Credentials } from '@/pages/Credentials/Credentials';
 import { CredentialRequests } from '@/pages/CredentialRequests/CredentialRequests';
+import { VerifyCredential } from '@/pages/VerifyCredential/VerifyCredential';
 import { AcademicPeriods } from '@/pages/AcademicPeriods/AcademicPeriods';
 import { Announcements } from '@/pages/Announcements/Announcements';
 import { DashboardLayout } from '@/components/templates/DashboardLayout/DashboardLayout';
@@ -211,6 +212,9 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Verificación de credencial — pública (se abre al escanear el QR) */}
+          <Route path="/verify/:matricula" element={<VerifyCredential />} />
 
           {/* Ruta por defecto (fallback para rutas desconocidas) */}
           <Route path="/home" element={<Navigate to="/" replace />} />

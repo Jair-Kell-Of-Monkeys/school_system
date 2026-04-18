@@ -427,10 +427,17 @@ class CredentialDownloadView(APIView):
 
 # ─── Verify (público) ─────────────────────────────────────────────────────────
 
-class CredentialVerifyView(APIView):
+class VerifyCredentialView(APIView):
     """
     GET /api/credentials/verify/{matricula}/
     Verifica una credencial por matrícula. Sin autenticación.
+
+    Devuelve exactamente cinco campos:
+        es_valido      — bool  (credential.is_active)
+        nombre_completo — str
+        carrera        — str
+        ciclo_escolar  — str
+        foto_url       — str | null  (URL absoluta)
     """
     permission_classes = [AllowAny]
 
@@ -441,27 +448,36 @@ class CredentialVerifyView(APIView):
             ).get(matricula=matricula)
         except Enrollment.DoesNotExist:
             return Response(
-                {'valid': False, 'error': 'Matrícula no encontrada.'},
+                {'error': 'Matrícula no encontrada.'},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
         try:
-            credential = Credential.objects.get(enrollment=enrollment, is_active=True)
+            credential = Credential.objects.get(enrollment=enrollment)
         except Credential.DoesNotExist:
             return Response(
-                {'valid': False, 'error': 'No se encontró credencial activa para esta matrícula.'},
+                {'error': 'No se encontró credencial para esta matrícula.'},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
         student = enrollment.student
+
+        foto_url = None
+        if student.photo:
+            try:
+                raw_url = student.photo.url
+                # Cloudinary ya devuelve URL absoluta; almacenamiento local es un path
+                foto_url = (
+                    raw_url if raw_url.startswith('http')
+                    else request.build_absolute_uri(raw_url)
+                )
+            except Exception:
+                foto_url = None
+
         return Response({
-            'valid': True,
-            'student_name': student.get_full_name(),
-            'matricula': enrollment.matricula,
-            'program': enrollment.program.name,
-            'program_code': enrollment.program.code,
-            'period': enrollment.period.name,
-            'valid_until': credential.valid_until,
-            'issued_at': credential.issued_at,
-            'is_active': credential.is_active,
+            'es_valido': credential.is_active,
+            'nombre_completo': student.get_full_name(),
+            'carrera': enrollment.program.name,
+            'ciclo_escolar': enrollment.period.name,
+            'foto_url': foto_url,
         })
