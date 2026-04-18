@@ -186,6 +186,8 @@ export const RegisterForm = () => {
 
   // ── CURP autofill helpers ───────────────────────────────────────────────
 
+  // Llamada cuando el usuario edita la CURP tras un autofill:
+  // los campos derivados se vuelven obsoletos y se borran.
   const clearAutoFill = () => {
     setCurpAutoFilled(false);
     setCurpLookupState('idle');
@@ -194,6 +196,13 @@ export const RegisterForm = () => {
     setValue('second_last_name', '');
     setValue('date_of_birth', '', { shouldValidate: false });
     setValue('gender', '', { shouldValidate: false });
+  };
+
+  // Llamada desde el botón "Editar manualmente":
+  // solo desbloquea los campos, no toca sus valores.
+  const enableManualEdit = () => {
+    setCurpAutoFilled(false);
+    setCurpLookupState('idle');
   };
 
   const handleCurpBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
@@ -356,7 +365,7 @@ export const RegisterForm = () => {
                     type="button"
                     className="text-xs underline"
                     style={{ color: 'var(--text-muted)' }}
-                    onClick={clearAutoFill}
+                    onClick={enableManualEdit}
                   >
                     Editar manualmente
                   </button>
