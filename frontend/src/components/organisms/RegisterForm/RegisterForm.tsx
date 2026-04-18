@@ -397,7 +397,7 @@ export const RegisterForm = () => {
             </div>
 
             <AuthField
-              label="Apellido Materno (opcional)"
+              label="Apellido Materno"
               icon={<User size={14} />}
               error={errors.second_last_name?.message}
               readOnly={curpAutoFilled}
