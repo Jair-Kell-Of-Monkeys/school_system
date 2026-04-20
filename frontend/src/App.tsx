@@ -15,6 +15,7 @@ import { ExamSessions } from '@/pages/ExamSessions/ExamSessions';
 import { Credentials } from '@/pages/Credentials/Credentials';
 import { CredentialRequests } from '@/pages/CredentialRequests/CredentialRequests';
 import { VerifyCredential } from '@/pages/VerifyCredential/VerifyCredential';
+import { OnlinePayment } from '@/pages/OnlinePayment/OnlinePayment';
 import { AcademicPeriods } from '@/pages/AcademicPeriods/AcademicPeriods';
 import { Announcements } from '@/pages/Announcements/Announcements';
 import { DashboardLayout } from '@/components/templates/DashboardLayout/DashboardLayout';
@@ -208,6 +209,18 @@ function App() {
               <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.JEFE_SERVICIOS]}>
                 <DashboardLayout>
                   <Announcements />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Pago en línea — Aspirantes y Alumnos */}
+          <Route
+            path="/pagar/:paymentId"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.ASPIRANTE, ROLES.ALUMNO]}>
+                <DashboardLayout>
+                  <OnlinePayment />
                 </DashboardLayout>
               </ProtectedRoute>
             }

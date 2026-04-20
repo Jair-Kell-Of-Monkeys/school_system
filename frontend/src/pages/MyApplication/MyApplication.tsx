@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card } from '@/components/atoms/Card/Card';
 import { Button } from '@/components/atoms/Button/Button';
@@ -285,6 +286,7 @@ function statusBadgeVariant(status: string): 'success' | 'danger' | 'info' | 'wa
 // ── Main component ────────────────────────────────────────────────────────────
 
 export const MyApplication = () => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formData, setFormData] = useState({ program: '', period: '' });
@@ -828,10 +830,41 @@ export const MyApplication = () => {
                 </p>
               </div>
 
-              <Button variant="outline" onClick={handleDownloadSlip} isLoading={isDownloadingSlip} disabled={isDownloadingSlip}>
-                <Download size={16} className="mr-2" />
-                Descargar Ficha de Pago
-              </Button>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={handleDownloadSlip}
+                  isLoading={isDownloadingSlip}
+                  disabled={isDownloadingSlip}
+                  className={application.status === 'payment_pending' ? 'flex-1' : ''}
+                >
+                  <Download size={16} className="mr-2" />
+                  Descargar Ficha de Pago
+                </Button>
+                {application.status === 'payment_pending' && (
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/pagar/${payment.id}`)}
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg text-white transition-all duration-200 hover:brightness-110 active:scale-[.97]"
+                    style={{ background: '#6C47FF' }}
+                  >
+                    <svg
+                      width="15" height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+                      <line x1="1" y1="10" x2="23" y2="10" />
+                    </svg>
+                    Pagar en línea
+                  </button>
+                )}
+              </div>
 
               {/* Formulario para subir comprobante */}
               {showUploadForm && (
@@ -1461,10 +1494,41 @@ export const MyApplication = () => {
                     </p>
                   </div>
 
-                  <Button variant="outline" onClick={handleDownloadEnrollSlip} isLoading={isDownloadingEnrollSlip} disabled={isDownloadingEnrollSlip}>
-                    <Download size={16} className="mr-2" />
-                    Descargar Ficha de Pago
-                  </Button>
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={handleDownloadEnrollSlip}
+                      isLoading={isDownloadingEnrollSlip}
+                      disabled={isDownloadingEnrollSlip}
+                      className={enrollment.status === 'pending_payment' ? 'flex-1' : ''}
+                    >
+                      <Download size={16} className="mr-2" />
+                      Descargar Ficha de Pago
+                    </Button>
+                    {enrollment.status === 'pending_payment' && (
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/pagar/${enrollmentPayment.id}`)}
+                        className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg text-white transition-all duration-200 hover:brightness-110 active:scale-[.97]"
+                        style={{ background: '#6C47FF' }}
+                      >
+                        <svg
+                          width="15" height="15"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+                          <line x1="1" y1="10" x2="23" y2="10" />
+                        </svg>
+                        Pagar en línea
+                      </button>
+                    )}
+                  </div>
 
                   {(enrollmentPayment.status === 'rejected' ||
                     (enrollmentPayment.status === 'pending' && enrollment.status === 'pending_payment')) && (
