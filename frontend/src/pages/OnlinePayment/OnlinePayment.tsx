@@ -90,8 +90,7 @@ export function OnlinePayment() {
   void paymentId;
 
   return (
-    <div className="w-full">
-      <div className="max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto py-6 px-4 space-y-6">
+    <div className="space-y-6">
 
         {/* ── Volver ──────────────────────────────────────────────────────── */}
         <button
@@ -245,7 +244,6 @@ export function OnlinePayment() {
           🔒 Pago seguro — los datos de tu tarjeta son cifrados
         </p>
 
-      </div>
     </div>
   );
 }
