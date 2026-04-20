@@ -91,7 +91,7 @@ export function OnlinePayment() {
 
   return (
     <div className="w-full">
-      <div className="max-w-lg mx-auto py-6 px-4 space-y-6">
+      <div className="max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto py-6 px-4 space-y-6">
 
         {/* ── Volver ──────────────────────────────────────────────────────── */}
         <button
@@ -125,99 +125,104 @@ export function OnlinePayment() {
           </div>
         </div>
 
-        {/* ── Resumen de pago ─────────────────────────────────────────────── */}
-        <div
-          className="rounded-2xl border p-5 space-y-4"
-          style={{
-            background: '#1a1a3e',
-            borderColor: 'rgba(108, 71, 255, 0.3)',
-          }}
-        >
-          <p
-            className="text-xs font-bold uppercase tracking-widest"
-            style={{ color: 'var(--text-muted)' }}
+        {/* ── Cards: Resumen + Método (side-by-side en lg) ────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+          {/* ── Resumen de pago ───────────────────────────────────────────── */}
+          <div
+            className="rounded-2xl border p-5 space-y-4"
+            style={{
+              background: '#1a1a3e',
+              borderColor: 'rgba(108, 71, 255, 0.3)',
+            }}
           >
-            Resumen de Pago
-          </p>
+            <p
+              className="text-xs font-bold uppercase tracking-widest"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              Resumen de Pago
+            </p>
 
-          {DUMMY_SUMMARY.map(({ label, value, highlight }) => (
-            <div key={label} className="flex items-center justify-between gap-4">
-              <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                {label}
-              </span>
-              <span
-                className="text-sm font-semibold"
-                style={{ color: highlight ? '#6C47FF' : 'var(--text-primary)' }}
-              >
-                {value}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* ── Método de pago ──────────────────────────────────────────────── */}
-        <div
-          className="rounded-2xl border p-5 space-y-3"
-          style={{
-            background: '#1a1a3e',
-            borderColor: 'rgba(255, 255, 255, 0.08)',
-          }}
-        >
-          <p
-            className="text-xs font-bold uppercase tracking-widest mb-1"
-            style={{ color: 'var(--text-muted)' }}
-          >
-            Método de Pago
-          </p>
-
-          {PAYMENT_METHODS.map(({ value, label }) => {
-            const checked = selectedMethod === value;
-            return (
-              <label
-                key={value}
-                className="flex items-center gap-3 cursor-pointer p-3 rounded-xl transition-all duration-150"
-                style={{
-                  background: checked ? 'rgba(108, 71, 255, 0.12)' : 'transparent',
-                  border: `1.5px solid ${checked ? '#6C47FF' : 'rgba(255, 255, 255, 0.08)'}`,
-                }}
-              >
-                {/* Input real oculto — accesibilidad */}
-                <input
-                  type="radio"
-                  name="payment_method"
-                  value={value}
-                  checked={checked}
-                  onChange={() => setSelectedMethod(value)}
-                  className="sr-only"
-                />
-
-                {/* Radio visual personalizado */}
-                <div
-                  className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
-                  style={{
-                    borderColor: checked ? '#6C47FF' : 'rgba(255, 255, 255, 0.3)',
-                  }}
-                >
-                  {checked && (
-                    <div
-                      className="w-2.5 h-2.5 rounded-full"
-                      style={{ background: '#6C47FF' }}
-                    />
-                  )}
-                </div>
-
-                <span
-                  className="text-sm font-medium"
-                  style={{
-                    color: checked ? 'var(--text-primary)' : 'var(--text-muted)',
-                  }}
-                >
+            {DUMMY_SUMMARY.map(({ label, value, highlight }) => (
+              <div key={label} className="flex items-center justify-between gap-4">
+                <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
                   {label}
                 </span>
-              </label>
-            );
-          })}
-        </div>
+                <span
+                  className="text-sm font-semibold"
+                  style={{ color: highlight ? '#6C47FF' : 'var(--text-primary)' }}
+                >
+                  {value}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* ── Método de pago ────────────────────────────────────────────── */}
+          <div
+            className="rounded-2xl border p-5 space-y-3"
+            style={{
+              background: '#1a1a3e',
+              borderColor: 'rgba(255, 255, 255, 0.08)',
+            }}
+          >
+            <p
+              className="text-xs font-bold uppercase tracking-widest mb-1"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              Método de Pago
+            </p>
+
+            {PAYMENT_METHODS.map(({ value, label }) => {
+              const checked = selectedMethod === value;
+              return (
+                <label
+                  key={value}
+                  className="flex items-center gap-3 cursor-pointer p-3 rounded-xl transition-all duration-150"
+                  style={{
+                    background: checked ? 'rgba(108, 71, 255, 0.12)' : 'transparent',
+                    border: `1.5px solid ${checked ? '#6C47FF' : 'rgba(255, 255, 255, 0.08)'}`,
+                  }}
+                >
+                  {/* Input real oculto — accesibilidad */}
+                  <input
+                    type="radio"
+                    name="payment_method"
+                    value={value}
+                    checked={checked}
+                    onChange={() => setSelectedMethod(value)}
+                    className="sr-only"
+                  />
+
+                  {/* Radio visual personalizado */}
+                  <div
+                    className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                    style={{
+                      borderColor: checked ? '#6C47FF' : 'rgba(255, 255, 255, 0.3)',
+                    }}
+                  >
+                    {checked && (
+                      <div
+                        className="w-2.5 h-2.5 rounded-full"
+                        style={{ background: '#6C47FF' }}
+                      />
+                    )}
+                  </div>
+
+                  <span
+                    className="text-sm font-medium"
+                    style={{
+                      color: checked ? 'var(--text-primary)' : 'var(--text-muted)',
+                    }}
+                  >
+                    {label}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+
+        </div>{/* /grid */}
 
         {/* ── Continuar ───────────────────────────────────────────────────── */}
         <button
