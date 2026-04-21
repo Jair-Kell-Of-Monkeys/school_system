@@ -15,8 +15,8 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth import update_session_auth_hash, get_user_model
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import User, UserProgramPermission, EmailVerificationToken
-from .email_service import send_verification_email, send_welcome_email
+from .models import User, UserProgramPermission, EmailVerificationToken, PasswordResetToken
+from .email_service import send_verification_email, send_welcome_email, send_password_reset_email
 
 from .models import User, UserProgramPermission
 from .serializers import (
@@ -30,6 +30,8 @@ from .serializers import (
     AssignProgramsSerializer,
     UserWithProgramsSerializer,
     UserProgramPermissionSerializer,
+    ForgotPasswordSerializer,
+    ResetPasswordSerializer,
 )
 from .permissions import IsServiciosEscolaresJefe
 from core.permissions import IsAdmin
@@ -1023,3 +1025,101 @@ class ServiciosEscolaresManagementViewSet(viewsets.ViewSet):
             'encargados_sin_programas': sin_programas,
             'programas_sin_encargado': programas_sin_encargado,
         })
+
+
+class ForgotPasswordView(generics.GenericAPIView):
+    """
+    Solicitar restablecimiento de contraseña.
+
+    Endpoint: POST /api/users/forgot-password/
+
+    Body:
+    {
+        "email": "usuario@correo.com"
+    }
+
+    Siempre responde 200 para no revelar qué emails están registrados.
+    Si el email existe, invalida tokens previos y envía el enlace.
+    """
+    permission_classes = [AllowAny]
+    serializer_class = ForgotPasswordSerializer
+
+    _MSG = 'Si el correo está registrado, recibirás un enlace en breve.'
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email'].lower()
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            # Respuesta genérica — no revelar si el email existe
+            return Response({'message': self._MSG})
+
+        # Invalidar tokens previos no usados
+        PasswordResetToken.objects.filter(user=user, is_used=False).update(is_used=True)
+
+        # Crear token nuevo
+        reset_token = PasswordResetToken.objects.create(user=user)
+
+        # Enviar email (Celery si disponible, thread como fallback)
+        try:
+            from .tasks import send_password_reset_email_task
+            send_password_reset_email_task.delay(user.email, reset_token.token)
+        except Exception:
+            thread = threading.Thread(
+                target=send_password_reset_email,
+                args=(user, reset_token.token),
+            )
+            thread.daemon = True
+            thread.start()
+
+        return Response({'message': self._MSG})
+
+
+class ResetPasswordView(generics.GenericAPIView):
+    """
+    Establecer nueva contraseña usando el token recibido por correo.
+
+    Endpoint: POST /api/users/reset-password/
+
+    Body:
+    {
+        "token": "<token>",
+        "new_password": "nueva_contraseña",
+        "confirm_password": "nueva_contraseña"
+    }
+    """
+    permission_classes = [AllowAny]
+    serializer_class = ResetPasswordSerializer
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        token_value = serializer.validated_data['token']
+        new_password = serializer.validated_data['new_password']
+
+        try:
+            reset_token = PasswordResetToken.objects.select_related('user').get(token=token_value)
+        except PasswordResetToken.DoesNotExist:
+            return Response(
+                {'error': 'El enlace es inválido o ha expirado.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not reset_token.is_valid():
+            return Response(
+                {'error': 'El enlace es inválido o ha expirado.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = reset_token.user
+        user.set_password(new_password)
+        user.save()
+
+        reset_token.is_used = True
+        reset_token.save()
+
+        return Response({'message': 'Contraseña actualizada correctamente.'})

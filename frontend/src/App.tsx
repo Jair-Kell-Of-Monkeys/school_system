@@ -15,6 +15,7 @@ import { ExamSessions } from '@/pages/ExamSessions/ExamSessions';
 import { Credentials } from '@/pages/Credentials/Credentials';
 import { CredentialRequests } from '@/pages/CredentialRequests/CredentialRequests';
 import { VerifyCredential } from '@/pages/VerifyCredential/VerifyCredential';
+import { ResetPassword } from '@/pages/ResetPassword/ResetPassword';
 import { OnlinePayment } from '@/pages/OnlinePayment/OnlinePayment';
 import { AcademicPeriods } from '@/pages/AcademicPeriods/AcademicPeriods';
 import { Announcements } from '@/pages/Announcements/Announcements';
@@ -43,6 +44,7 @@ function App() {
           <Route path={ROUTES.LOGIN} element={<Login />} />
           <Route path={ROUTES.REGISTER} element={<Register />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Dashboard */}
           <Route

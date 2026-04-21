@@ -290,3 +290,49 @@ class EmailVerificationToken(models.Model):
     @property
     def is_valid(self):
         return not self.is_used and not self.is_expired
+
+
+class PasswordResetToken(models.Model):
+    """
+    Token de un solo uso para restablecer contraseña olvidada.
+    Expira en 1 hora.
+    """
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='password_reset_tokens',
+        verbose_name='Usuario'
+    )
+    token = models.CharField(
+        max_length=64,
+        unique=True,
+        verbose_name='Token'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Creado'
+    )
+    is_used = models.BooleanField(
+        default=False,
+        verbose_name='Usado'
+    )
+
+    class Meta:
+        db_table = 'password_reset_tokens'
+        verbose_name = 'Token de Restablecimiento'
+        verbose_name_plural = 'Tokens de Restablecimiento'
+
+    def __str__(self):
+        return f"Reset token de {self.user.email}"
+
+    def save(self, *args, **kwargs):
+        if not self.token:
+            self.token = secrets.token_urlsafe(32)
+        super().save(*args, **kwargs)
+
+    def is_valid(self):
+        if self.is_used:
+            return False
+        expiry = self.created_at + timezone.timedelta(hours=1)
+        return timezone.now() < expiry

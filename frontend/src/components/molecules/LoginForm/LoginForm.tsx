@@ -5,7 +5,8 @@ import { useAuthStore } from '@/store/authStore';
 import type { LoginCredentials } from '@/types';
 import axios from 'axios';
 import { API_BASE_URL, API_ENDPOINTS, ROUTES } from '@/config/constants';
-import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, AlertCircle, ArrowLeft } from 'lucide-react';
+import { authService } from '@/services/auth/authService';
 
 // ── Styled input wrapper with leading icon ─────────────────────────────────
 
@@ -59,6 +60,121 @@ const AuthField = ({ label, error, icon, rightSlot, id, ...props }: FieldProps) 
   );
 };
 
+// ── Forgot-password mode ───────────────────────────────────────────────────
+
+type ForgotState = 'idle' | 'loading' | 'sent';
+
+const ForgotPasswordPanel = ({ onBack }: { onBack: () => void }) => {
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [forgotState, setForgotState] = useState<ForgotState>('idle');
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      setEmailError('El correo es requerido');
+      return;
+    }
+    if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(email)) {
+      setEmailError('Correo inválido');
+      return;
+    }
+    setEmailError('');
+    setForgotState('loading');
+    try {
+      await authService.forgotPassword(email);
+    } finally {
+      // Siempre mostramos "enviado" — consistente con backend que no revela emails
+      setForgotState('sent');
+    }
+  };
+
+  return (
+    <div className="w-full max-w-sm">
+      {/* Header */}
+      <div className="mb-8">
+        <div
+          className="w-12 h-12 rounded-2xl flex items-center justify-center mb-6 font-bold text-white text-lg"
+          style={{ background: 'linear-gradient(135deg, #4f46e5, #6366f1)' }}
+        >
+          U
+        </div>
+        <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
+          Recuperar contraseña
+        </h1>
+        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+          Ingresa tu correo y te enviaremos un enlace para restablecerla.
+        </p>
+      </div>
+
+      {forgotState === 'sent' ? (
+        <div className="space-y-5">
+          <div
+            className="rounded-xl px-4 py-4 text-sm"
+            style={{
+              background: 'var(--color-success-bg)',
+              border: '1px solid var(--color-success-border)',
+              color: 'var(--color-success)',
+            }}
+          >
+            Revisa tu correo. Si el email está registrado, recibirás un enlace para
+            restablecer tu contraseña en los próximos minutos.
+          </div>
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors"
+            style={{ color: 'var(--color-info)' }}
+          >
+            <ArrowLeft size={14} />
+            Volver al inicio de sesión
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={handleSend} className="space-y-4">
+          <AuthField
+            label="Correo electrónico"
+            type="email"
+            autoComplete="email"
+            placeholder="tu@correo.com"
+            icon={<Mail size={15} />}
+            error={emailError}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+
+          <button
+            type="submit"
+            disabled={forgotState === 'loading'}
+            className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-150 flex items-center justify-center gap-2 mt-2"
+            style={{
+              background: forgotState === 'loading'
+                ? 'rgba(99,102,241,0.6)'
+                : 'linear-gradient(135deg, #4f46e5, #6366f1)',
+              boxShadow: forgotState === 'loading' ? 'none' : '0 4px 14px rgba(99,102,241,0.35)',
+            }}
+          >
+            {forgotState === 'loading' && (
+              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            )}
+            {forgotState === 'loading' ? 'Enviando…' : 'Enviar enlace'}
+          </button>
+
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors mt-1"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            <ArrowLeft size={14} />
+            Volver al inicio de sesión
+          </button>
+        </form>
+      )}
+    </div>
+  );
+};
+
 // ── LoginForm ─────────────────────────────────────────────────────────────
 
 export const LoginForm = () => {
@@ -67,6 +183,7 @@ export const LoginForm = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
 
   const {
     register,
@@ -88,6 +205,10 @@ export const LoginForm = () => {
       setIsLoading(false);
     }
   };
+
+  if (showForgot) {
+    return <ForgotPasswordPanel onBack={() => setShowForgot(false)} />;
+  }
 
   return (
     <div className="w-full max-w-sm">
@@ -165,6 +286,18 @@ export const LoginForm = () => {
             {error}
           </div>
         )}
+
+        {/* Forgot password link */}
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => setShowForgot(true)}
+            className="text-xs font-medium transition-colors"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            ¿Olvidaste tu contraseña?
+          </button>
+        </div>
 
         {/* Submit */}
         <button

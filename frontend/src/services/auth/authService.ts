@@ -45,4 +45,22 @@ export const authService = {
     const response = await axios.get(`/users/curp-lookup/?curp=${encodeURIComponent(curp)}`);
     return response.data;
   },
+
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    const response = await axios.post('/users/forgot-password/', { email });
+    return response.data;
+  },
+
+  async resetPassword(
+    token: string,
+    newPassword: string,
+    confirmPassword: string,
+  ): Promise<{ message: string }> {
+    const response = await axios.post('/users/reset-password/', {
+      token,
+      new_password: newPassword,
+      confirm_password: confirmPassword,
+    });
+    return response.data;
+  },
 };

@@ -23,6 +23,8 @@ from .views import (
     ServiciosEscolaresManagementViewSet,
     VerifyEmailView,
     ResendVerificationEmailView,
+    ForgotPasswordView,
+    ResetPasswordView,
 )
 
 # ============================================================================
@@ -89,6 +91,8 @@ urlpatterns = [
     path('curp-lookup/', CurpLookupView.as_view(), name='curp-lookup'),
     path('verify-email/', VerifyEmailView.as_view(), name='verify-email'),
     path('resend-verification/', ResendVerificationEmailView.as_view(), name='resend-verification'),
+    path('forgot-password/', ForgotPasswordView.as_view(), name='forgot-password'),
+    path('reset-password/', ResetPasswordView.as_view(), name='reset-password'),
     
     # ========================================================================
     # ROUTER URLS

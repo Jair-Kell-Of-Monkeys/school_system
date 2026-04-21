@@ -220,6 +220,37 @@ class ChangePasswordSerializer(serializers.Serializer):
         return value
 
 
+class ForgotPasswordSerializer(serializers.Serializer):
+    """
+    Serializer para solicitar restablecimiento de contraseña.
+    Solo requiere el email del usuario.
+    """
+    email = serializers.EmailField(required=True)
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+    """
+    Serializer para establecer la nueva contraseña usando el token recibido por correo.
+    """
+    token = serializers.CharField(required=True)
+    new_password = serializers.CharField(
+        required=True,
+        min_length=8,
+        style={'input_type': 'password'},
+    )
+    confirm_password = serializers.CharField(
+        required=True,
+        style={'input_type': 'password'},
+    )
+
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['confirm_password']:
+            raise serializers.ValidationError({
+                'confirm_password': 'Las contraseñas no coinciden.'
+            })
+        return attrs
+
+
 class UserProfileSerializer(serializers.ModelSerializer):
     """
     Serializer completo para perfil de usuario.
