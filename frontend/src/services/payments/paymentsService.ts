@@ -24,7 +24,10 @@ export const paymentsService = {
     const response = await axios.get('/pre-enrollments/payments/', { params });
     const data = response.data;
     const results: Payment[] = Array.isArray(data) ? data : data.results ?? [];
-    return results[0] ?? null;
+    if (results.length === 0) return null;
+    const validated = results.find((p) => p.status === 'validated');
+    if (validated) return validated;
+    return results[results.length - 1];
   },
 
   // Ver detalle de pago
