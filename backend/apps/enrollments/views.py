@@ -596,6 +596,8 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
             rows.append(['Horario', enrollment.schedule])
         rows.append(['Fecha de inscripción', enrolled_at_str])
 
+        HIGHLIGHT = colors.HexColor('#dbeafe')  # blue-100
+
         info_table = Table(rows, colWidths=[4.5 * cm, 8.5 * cm])
         info_table.setStyle(TableStyle([
             ('FONTNAME',       (0, 0), (0, -1),  'Helvetica-Bold'),
@@ -604,11 +606,17 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
             ('TEXTCOLOR',      (0, 0), (0, -1),  TEXT_MUTED),
             ('TEXTCOLOR',      (1, 0), (1, -1),  colors.HexColor('#111827')),
             ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.white, ROW_ALT]),
+            # Highlight matrícula (row 1) and correo institucional (row 2)
+            ('BACKGROUND',     (0, 1), (-1, 1),  HIGHLIGHT),
+            ('BACKGROUND',     (0, 2), (-1, 2),  HIGHLIGHT),
+            ('FONTNAME',       (1, 1), (1, 1),   'Helvetica-Bold'),
+            ('FONTSIZE',       (0, 1), (-1, 1),  11),
+            ('TEXTCOLOR',      (1, 1), (1, 1),   BRAND),
             ('GRID',           (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
-            ('TOPPADDING',     (0, 0), (-1, -1), 6),
-            ('BOTTOMPADDING',  (0, 0), (-1, -1), 6),
-            ('LEFTPADDING',    (0, 0), (-1, -1), 8),
-            ('RIGHTPADDING',   (0, 0), (-1, -1), 8),
+            ('TOPPADDING',     (0, 0), (-1, -1), 7),
+            ('BOTTOMPADDING',  (0, 0), (-1, -1), 7),
+            ('LEFTPADDING',    (0, 0), (-1, -1), 10),
+            ('RIGHTPADDING',   (0, 0), (-1, -1), 10),
         ]))
 
         # ── Código QR de verificación ─────────────────────────────────────
@@ -668,7 +676,20 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
             footer_p,
         ))
 
-        doc.build(story)
+        # ── Marca de agua diagonal ────────────────────────────────────────
+        from reportlab.lib.pagesizes import A4 as _A4
+
+        def draw_watermark(canvas_obj, _doc_obj):
+            page_w, page_h = _A4
+            canvas_obj.saveState()
+            canvas_obj.setFont('Helvetica-Bold', 52)
+            canvas_obj.setFillColorRGB(0.76, 0.86, 0.98)  # light brand blue
+            canvas_obj.translate(page_w / 2, page_h / 2)
+            canvas_obj.rotate(45)
+            canvas_obj.drawCentredString(0, 0, 'DOCUMENTO OFICIAL')
+            canvas_obj.restoreState()
+
+        doc.build(story, onFirstPage=draw_watermark, onLaterPages=draw_watermark)
 
     # ------------------------------------------------------------------
     # MY ENROLLMENT (alumno autenticado)
@@ -702,3 +723,252 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
 
         serializer = EnrollmentDetailSerializer(enrollments, many=True, context={'request': request})
         return Response(serializer.data)
+
+
+# ── Public verification endpoint (no auth required) ───────────────────────────
+
+def verify_enrollment_public(request, enrollment_id):
+    """
+    GET /api/verify/enrollment/<enrollment_id>/
+    Página HTML pública para verificar la autenticidad de un comprobante de inscripción.
+    """
+    try:
+        enrollment = (
+            Enrollment.objects
+            .select_related('student', 'student__user', 'program', 'period')
+            .get(pk=enrollment_id, status='enrolled')
+        )
+        found = True
+    except (Enrollment.DoesNotExist, Exception):
+        found = False
+        enrollment = None
+
+    if found:
+        enrolled_at_str = ''
+        if enrollment.enrolled_at:
+            enrolled_at_str = enrollment.enrolled_at.strftime('%d/%m/%Y')
+        elif enrollment.updated_at:
+            enrolled_at_str = enrollment.updated_at.strftime('%d/%m/%Y')
+
+        html = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verificación de Inscripción — Sistema Universitario</title>
+  <style>
+    *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    body {{
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f5ff;
+      color: #111827;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }}
+    .card {{
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(26, 86, 219, 0.10);
+      max-width: 560px;
+      width: 100%;
+      overflow: hidden;
+    }}
+    .header {{
+      background: #1a56db;
+      padding: 2rem;
+      text-align: center;
+      color: #ffffff;
+    }}
+    .header h1 {{ font-size: 1.15rem; font-weight: 700; letter-spacing: 0.05em; opacity: 0.95; }}
+    .header p {{ font-size: 0.875rem; opacity: 0.75; margin-top: 0.25rem; }}
+    .badge-valid {{
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #d1fae5;
+      color: #065f46;
+      border: 1.5px solid #6ee7b7;
+      border-radius: 9999px;
+      padding: 0.4rem 1.1rem;
+      font-size: 0.875rem;
+      font-weight: 700;
+      margin-top: 1rem;
+    }}
+    .badge-valid svg {{ flex-shrink: 0; }}
+    .body {{ padding: 1.75rem 2rem; }}
+    .field {{
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 0.65rem 0;
+      border-bottom: 1px solid #e5e7eb;
+      gap: 1rem;
+    }}
+    .field:last-child {{ border-bottom: none; }}
+    .field-label {{
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }}
+    .field-value {{
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #111827;
+      text-align: right;
+    }}
+    .field-value.highlight {{
+      color: #1a56db;
+      font-size: 1rem;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.08em;
+    }}
+    .footer {{
+      background: #f0f5ff;
+      border-top: 1px solid #dbeafe;
+      padding: 1rem 2rem;
+      text-align: center;
+      font-size: 0.75rem;
+      color: #6b7280;
+    }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <h1>SISTEMA UNIVERSITARIO</h1>
+      <p>Verificación de Comprobante de Inscripción</p>
+      <div class="badge-valid">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+        Documento Válido
+      </div>
+    </div>
+    <div class="body">
+      <div class="field">
+        <span class="field-label">Nombre completo</span>
+        <span class="field-value">{enrollment.student.get_full_name()}</span>
+      </div>
+      <div class="field">
+        <span class="field-label">Matrícula</span>
+        <span class="field-value highlight">{enrollment.matricula}</span>
+      </div>
+      <div class="field">
+        <span class="field-label">Programa</span>
+        <span class="field-value">{enrollment.program.name}</span>
+      </div>
+      <div class="field">
+        <span class="field-label">Periodo</span>
+        <span class="field-value">{enrollment.period.name}</span>
+      </div>
+      <div class="field">
+        <span class="field-label">Fecha de inscripción</span>
+        <span class="field-value">{enrolled_at_str}</span>
+      </div>
+      <div class="field">
+        <span class="field-label">Estado</span>
+        <span class="field-value" style="color:#065f46;">Inscrito</span>
+      </div>
+    </div>
+    <div class="footer">
+      Este documento ha sido verificado contra los registros oficiales del Sistema Universitario.
+    </div>
+  </div>
+</body>
+</html>"""
+    else:
+        html = """<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verificación de Inscripción — Sistema Universitario</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f5ff;
+      color: #111827;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(26, 86, 219, 0.10);
+      max-width: 480px;
+      width: 100%;
+      overflow: hidden;
+    }
+    .header {
+      background: #1a56db;
+      padding: 2rem;
+      text-align: center;
+      color: #ffffff;
+    }
+    .header h1 { font-size: 1.15rem; font-weight: 700; letter-spacing: 0.05em; opacity: 0.95; }
+    .header p { font-size: 0.875rem; opacity: 0.75; margin-top: 0.25rem; }
+    .badge-invalid {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1.5px solid #fca5a5;
+      border-radius: 9999px;
+      padding: 0.4rem 1.1rem;
+      font-size: 0.875rem;
+      font-weight: 700;
+      margin-top: 1rem;
+    }
+    .body { padding: 1.75rem 2rem; text-align: center; color: #6b7280; font-size: 0.9rem; }
+    .footer {
+      background: #f0f5ff;
+      border-top: 1px solid #dbeafe;
+      padding: 1rem 2rem;
+      text-align: center;
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <h1>SISTEMA UNIVERSITARIO</h1>
+      <p>Verificación de Comprobante de Inscripción</p>
+      <div class="badge-invalid">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="15" y1="9" x2="9" y2="15"/>
+          <line x1="9" y1="9" x2="15" y2="15"/>
+        </svg>
+        Documento No Encontrado
+      </div>
+    </div>
+    <div class="body">
+      <p>No se encontró una inscripción válida con este identificador.</p>
+      <p style="margin-top:0.5rem;">El documento puede ser inválido, haber sido revocado o el código QR puede estar dañado.</p>
+    </div>
+    <div class="footer">
+      Si crees que esto es un error, acude a la oficina de Servicios Escolares con tu comprobante físico.
+    </div>
+  </div>
+</body>
+</html>"""
+
+    return HttpResponse(html, content_type='text/html; charset=utf-8')

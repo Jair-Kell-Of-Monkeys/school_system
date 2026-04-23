@@ -12,6 +12,7 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
     TokenVerifyView,
 )
+from apps.enrollments.views import verify_enrollment_public
 
 urlpatterns = [
     # Admin
@@ -29,6 +30,8 @@ urlpatterns = [
     path('api/pre-enrollments/', include('apps.pre_enrollment.urls')),
     path('api/enrollments/', include('apps.enrollments.urls')),
     path('api/exams/', include('apps.exams.urls')),
+    # Public enrollment verification (QR-accessible, no auth)
+    path('api/verify/enrollment/<str:enrollment_id>/', verify_enrollment_public, name='verify-enrollment'),
     #path('api/payments/', include('apps.payments.urls')),
     path('api/credentials/', include('apps.credentials.urls')),
 ]

@@ -342,7 +342,7 @@ export const MyApplication = () => {
   const { data: enrollmentPayment, isLoading: isEnrollPaymentLoading } = useQuery({
     queryKey: ['enrollment-payment', application?.id],
     queryFn: () => paymentsService.getPaymentForPreEnrollment(application!.id, 'inscripcion'),
-    enabled: !!enrollment && enrollment.status === 'pending_payment',
+    enabled: !!enrollment && (enrollment.status === 'pending_payment' || enrollment.status === 'enrolled'),
   });
 
   const { data: myCredentialRequests = [] } = useQuery({
@@ -933,7 +933,9 @@ export const MyApplication = () => {
       )}
 
       {/* ── Examen asignado ──────────────────────────────────────────────── */}
-      {application.exam_date && (
+      {application.exam_date &&
+        application.exam_score == null &&
+        new Date(application.exam_date) > new Date() && (
         <div
           className="rounded-2xl p-5 border"
           style={{
@@ -1110,6 +1112,17 @@ export const MyApplication = () => {
                     <Download size={16} className="mr-2" />
                     Descargar Comprobante de Inscripción
                   </Button>
+                  {enrollmentPayment?.status === 'validated' && (
+                    <Button
+                      variant="outline"
+                      onClick={handleDownloadEnrollReceipt}
+                      isLoading={isDownloadingEnrollReceipt}
+                      disabled={isDownloadingEnrollReceipt}
+                    >
+                      <Download size={16} className="mr-2" />
+                      Descargar Recibo de Pago de Inscripción
+                    </Button>
+                  )}
                 </div>
                 <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
                   Para activar tu correo institucional, acude a Servicios Escolares con identificación oficial.
