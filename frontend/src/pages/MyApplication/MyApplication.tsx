@@ -40,7 +40,6 @@ const ENROLLMENT_DOC_TYPES = [
 ] as const;
 
 const PAYMENT_STATUSES = ['payment_pending', 'payment_submitted', 'payment_validated'];
-const ENROLLMENT_PAYMENT_STATUSES = ['payment_pending', 'payment_submitted', 'payment_validated'];
 
 // ── Process stepper ──────────────────────────────────────────────────────────
 
@@ -343,7 +342,7 @@ export const MyApplication = () => {
   const { data: enrollmentPayment, isLoading: isEnrollPaymentLoading } = useQuery({
     queryKey: ['enrollment-payment', application?.id],
     queryFn: () => paymentsService.getPaymentForPreEnrollment(application!.id, 'inscripcion'),
-    enabled: !!enrollment && ENROLLMENT_PAYMENT_STATUSES.includes(enrollment.status),
+    enabled: !!enrollment && enrollment.status === 'pending_payment',
   });
 
   const { data: myCredentialRequests = [] } = useQuery({
@@ -1469,12 +1468,16 @@ export const MyApplication = () => {
                 <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Cargando información de pago...</p>
               )}
 
-              {!isEnrollPaymentLoading && !enrollmentPayment && (
+              {!isEnrollPaymentLoading && !enrollmentPayment && !createEnrollPaymentMutation.isSuccess && (
                 <div className="text-center py-2">
                   <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
                     Genera tu ficha de pago para obtener el número de referencia bancaria.
                   </p>
-                  <Button onClick={() => createEnrollPaymentMutation.mutate()} isLoading={createEnrollPaymentMutation.isPending}>
+                  <Button
+                    onClick={() => createEnrollPaymentMutation.mutate()}
+                    isLoading={createEnrollPaymentMutation.isPending}
+                    disabled={createEnrollPaymentMutation.isPending}
+                  >
                     Generar Ficha de Pago
                   </Button>
                 </div>
