@@ -1445,14 +1445,21 @@ export const MyApplication = () => {
               <SectionTitle icon={<CreditCard size={17} />} title="Pago de Inscripción" />
 
               <div
-                className="rounded-xl p-4 border mb-5"
+                className="rounded-xl p-4 mb-5 border"
                 style={{ background: 'var(--color-info-bg)', borderColor: 'var(--color-info-border)' }}
               >
-                <p className="font-semibold text-sm" style={{ color: 'var(--color-info)' }}>
+                <p className="font-bold text-lg" style={{ color: 'var(--color-info)' }}>
+                  {enrollmentPayment
+                    ? new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(
+                        parseFloat(enrollmentPayment.amount),
+                      )
+                    : '—'}
+                </p>
+                <p className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
                   Concepto: Pago de Inscripción
                 </p>
                 {enrollment.group && (
-                  <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
                     Grupo: {enrollment.group} · Horario: {enrollment.schedule}
                   </p>
                 )}
@@ -1531,7 +1538,7 @@ export const MyApplication = () => {
                   </div>
 
                   {(enrollmentPayment.status === 'rejected' ||
-                    (enrollmentPayment.status === 'pending' && enrollment.status === 'pending_payment')) && (
+                    (enrollmentPayment.status === 'pending' && !enrollmentPayment.receipt_file)) && (
                     <div
                       className="rounded-xl p-4 border space-y-3"
                       style={{ background: 'var(--bg-surface-2)', borderColor: 'var(--border)' }}
@@ -1580,7 +1587,6 @@ export const MyApplication = () => {
                   )}
 
                   {enrollmentPayment.status === 'pending' &&
-                    enrollment.status === 'pending_payment' &&
                     enrollmentPayment.receipt_file && (
                     <Callout color="warning" icon={<Clock size={17} />} title="Comprobante en revisión">
                       Tu comprobante fue enviado y está siendo revisado por el equipo de finanzas.
