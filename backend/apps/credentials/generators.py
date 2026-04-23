@@ -68,34 +68,23 @@ def generate_qr_code_bytes(matricula: str) -> bytes:
 
 def generate_credential_pdf(credential_request) -> bytes:
     """
-    Genera el PDF de la credencial estudiantil.
+    Genera el PDF de la credencial estudiantil en formato tarjeta (85.6 × 54 mm).
 
-    Layout: A5 landscape, dos columnas, canvas directo (sin Platypus).
-
-    ┌────────── HEADER (azul, 1.4 cm) ──────────────────────────────────┐
-    │  SISTEMA UNIVERSITARIO / Credencial Estudiantil Oficial  [LOGO□]  │
-    ├──── SIDEBAR ─────┬──── CONTENT ──────────────────────────────────┤
-    │  (azul, 3.2 cm)  │  (blanco)                                      │
-    │  foto 2.8×3.4 cm │  Nombre completo  (13 pt, azul)                │
-    │  badge ESTUD.    │  Programa         (9 pt, gris, máx 2 líneas)   │
-    │                  │                                                 │
-    │                  │  MATRÍCULA    PERIODO                           │
-    │                  │  valor        valor                             │
-    │                  │  VÁLIDO HASTA TIPO                              │
-    │                  │  valor(rojo)  valor                             │
-    │                  │                                                 │
-    │                  │  [QR 2.2cm]   ────────── firma                 │
-    │                  │  Verificar    Sello institucional               │
-    ├──────────────────┴─────────────────────────────────────────────── ┤
-    │  FOOTER (gris claro, 0.45 cm)  "Documento oficial..."             │
+    Layout institucional:
+    ┌──────────────── FRANJA AZUL SUPERIOR (#1a56db) ────────────────────┐
+    │  SISTEMA UNIVERSITARIO          Credencial Estudiantil Oficial      │
+    ├─SIDEBAR─┬── FOTO ──┬──── DATOS DEL ESTUDIANTE ──────────┬─── QR ──┤
+    │ #1240a0 │  blanco  │ Nombre completo  (bold)             │ 14×14mm │
+    │ rotated │  borde   │ Programa         (gris)             │         │
+    │  text   │          │ MATRÍCULA        (azul highlight)   │         │
+    │         │          │ PERÍODO VIGENTE                      │         │
+    ├─────────┴──────────┴─────────────────────────────────────┴─────────┤
+    │              FRANJA AZUL INFERIOR — "CREDENCIAL ESTUDIANTIL VÁLIDA" │
     └────────────────────────────────────────────────────────────────────┘
-
-    Retorna los bytes del PDF.
     """
     import tempfile
 
-    from reportlab.lib.pagesizes import landscape, A5
-    from reportlab.lib.units import cm
+    from reportlab.lib.units import mm
     from reportlab.pdfgen import canvas as pdf_canvas
 
     # ── Datos ─────────────────────────────────────────────────────────────
@@ -103,113 +92,104 @@ def generate_credential_pdf(credential_request) -> bytes:
     student    = enrollment.student
     period     = enrollment.period
 
-    MESES = {
-        1: 'enero', 2: 'febrero', 3: 'marzo',     4: 'abril',
-        5: 'mayo',  6: 'junio',   7: 'julio',      8: 'agosto',
-        9: 'septiembre', 10: 'octubre', 11: 'noviembre', 12: 'diciembre',
-    }
-    v = period.end_date
-    valid_until_str = f"{v.day} de {MESES[v.month]} de {v.year}"
+    # ── Tamaño tarjeta estándar ───────────────────────────────────────────
+    W = 85.6 * mm   # ≈ 242.65 pts
+    H = 54.0 * mm   # ≈ 153.07 pts
 
-    # Tipo de entrega (consulta Credential si ya existe, default: Digital)
-    delivery_label = 'Digital'
-    try:
-        from .models import Credential as _Credential
-        _cred = _Credential.objects.filter(enrollment=enrollment).first()
-        if _cred and _cred.delivery_method == 'physical':
-            delivery_label = 'Físico'
-    except Exception:
-        pass
-
-    # ── Configuración de página ───────────────────────────────────────────
-    W, H = landscape(A5)          # ≈ 595.28 × 420.94 pts  (210 × 148.5 mm)
     buf = io.BytesIO()
     c   = pdf_canvas.Canvas(buf, pagesize=(W, H))
 
     # ── Paleta (RGB 0–1) ─────────────────────────────────────────────────
-    AZUL       = (0.118, 0.227, 0.431)   # #1e3a6e
+    BRAND      = (0.102, 0.337, 0.859)   # #1a56db
+    BRAND_DARK = (0.071, 0.251, 0.627)   # #1240a0
     BLANCO     = (1.0,   1.0,   1.0)
     GRIS       = (0.420, 0.447, 0.502)   # #6b7280
-    ROJO       = (0.863, 0.157, 0.157)   # #dc2626
-    FONDO_FOOT = (0.976, 0.980, 0.984)   # #f9fafb
-    BORDE_GRIS = (0.820, 0.835, 0.855)   # #d1d5db
     OSCURO     = (0.067, 0.094, 0.153)   # #111827
+    BORDE      = (0.820, 0.835, 0.855)   # #d1d5db
+    HIGHLIGHT  = (0.859, 0.906, 0.996)   # #dbeafe
 
-    # ── Medidas base ─────────────────────────────────────────────────────
-    HEADER_H  = 1.4  * cm
-    FOOTER_H  = 0.45 * cm
-    SIDEBAR_W = 3.2  * cm
-    PAD       = 0.35 * cm
+    # ── Medidas (en pts, via mm unit) ────────────────────────────────────
+    TOP_H  = 8.5 * mm
+    BOT_H  = 4.5 * mm
+    SIDE_W = 11.0 * mm
+    PAD    = 2.0 * mm
 
-    y_header = H - HEADER_H
-    body_h   = H - HEADER_H - FOOTER_H
+    body_top = H - TOP_H
+    body_h   = H - TOP_H - BOT_H   # 41 mm
 
     # ═══════════════════════════════════════════════════════════════════════
     # 1. FONDOS
     # ═══════════════════════════════════════════════════════════════════════
 
-    # Página blanca base
-    c.setFillColorRGB(1, 1, 1)
+    # Blanco base
+    c.setFillColorRGB(*BLANCO)
     c.rect(0, 0, W, H, fill=1, stroke=0)
 
-    # Barra de encabezado (azul)
-    c.setFillColorRGB(*AZUL)
-    c.rect(0, y_header, W, HEADER_H, fill=1, stroke=0)
+    # Textura: líneas diagonales muy sutiles en el área del cuerpo
+    c.setStrokeColorRGB(0.90, 0.93, 0.99)
+    c.setLineWidth(0.4)
+    step = 5 * mm
+    for i in range(int(-body_h), int(W + body_h + step), int(step)):
+        c.line(SIDE_W + i, BOT_H, SIDE_W + i + body_h, body_top)
 
-    # Columna lateral (azul)
-    c.rect(0, FOOTER_H, SIDEBAR_W, body_h, fill=1, stroke=0)
+    # Franja superior azul
+    c.setFillColorRGB(*BRAND)
+    c.rect(0, body_top, W, TOP_H, fill=1, stroke=0)
 
-    # Barra de pie (gris claro)
-    c.setFillColorRGB(*FONDO_FOOT)
-    c.rect(0, 0, W, FOOTER_H, fill=1, stroke=0)
+    # Sidebar izquierdo azul oscuro
+    c.setFillColorRGB(*BRAND_DARK)
+    c.rect(0, BOT_H, SIDE_W, body_h, fill=1, stroke=0)
 
-    # Línea divisoria sidebar / contenido
-    c.setStrokeColorRGB(*BORDE_GRIS)
-    c.setLineWidth(0.3)
-    c.line(SIDEBAR_W, FOOTER_H, SIDEBAR_W, y_header)
+    # Franja inferior azul
+    c.setFillColorRGB(*BRAND)
+    c.rect(0, 0, W, BOT_H, fill=1, stroke=0)
 
     # ═══════════════════════════════════════════════════════════════════════
-    # 2. ENCABEZADO
+    # 2. FRANJA SUPERIOR
     # ═══════════════════════════════════════════════════════════════════════
 
     c.setFillColorRGB(*BLANCO)
-    c.setFont('Helvetica-Bold', 8.5)
-    c.drawString(SIDEBAR_W + PAD, y_header + 0.62 * cm, 'SISTEMA UNIVERSITARIO')
-    c.setFont('Helvetica', 6.5)
-    c.drawString(SIDEBAR_W + PAD, y_header + 0.22 * cm, 'Credencial Estudiantil Oficial')
-
-    # Placeholder de logo (rect blanco semitransparente, extremo derecho)
-    logo_w = 1.5 * cm
-    logo_h = 1.1 * cm
-    logo_x = W - logo_w - 0.3 * cm
-    logo_y = y_header + (HEADER_H - logo_h) / 2
-    c.setFillColorRGB(*BLANCO)
-    c.setFillAlpha(0.25)
-    c.roundRect(logo_x, logo_y, logo_w, logo_h, 2, fill=1, stroke=0)
-    c.setFillAlpha(1.0)
+    c.setFont('Helvetica-Bold', 7.5)
+    c.drawString(SIDE_W + PAD, body_top + 4.8 * mm, 'SISTEMA UNIVERSITARIO')
+    c.setFont('Helvetica', 5.5)
+    c.setFillColorRGB(0.78, 0.87, 0.99)   # #c7d9f8
+    c.drawString(SIDE_W + PAD, body_top + 1.5 * mm, 'Credencial Estudiantil Oficial')
 
     # ═══════════════════════════════════════════════════════════════════════
-    # 3. SIDEBAR — foto + badge
+    # 3. SIDEBAR — texto institucional rotado
     # ═══════════════════════════════════════════════════════════════════════
 
-    PHOTO_W = 2.8 * cm
-    PHOTO_H = 3.4 * cm
-    BORDER  = 0.1 * cm
-    photo_x = (SIDEBAR_W - PHOTO_W) / 2
-    photo_y = y_header - 0.4 * cm - PHOTO_H
-
-    # Marco blanco alrededor de la foto
+    sidebar_cx = SIDE_W / 2
+    sidebar_cy = BOT_H + body_h / 2
+    c.saveState()
+    c.translate(sidebar_cx, sidebar_cy)
+    c.rotate(90)
     c.setFillColorRGB(*BLANCO)
-    c.roundRect(
+    c.setFont('Helvetica-Bold', 6.5)
+    c.drawCentredString(0, 1.5 * mm, 'SISTEMA')
+    c.setFont('Helvetica', 5.0)
+    c.setFillColorRGB(0.78, 0.87, 0.99)
+    c.drawCentredString(0, -2.5 * mm, 'UNIVERSITARIO')
+    c.restoreState()
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # 4. FOTO del estudiante
+    # ═══════════════════════════════════════════════════════════════════════
+
+    PHOTO_W = 17.0 * mm
+    PHOTO_H = 21.0 * mm
+    BORDER  = 0.8 * mm
+    photo_x = SIDE_W + PAD
+    photo_y = BOT_H + (body_h - PHOTO_H) / 2   # centrada verticalmente
+
+    # Marco blanco
+    c.setFillColorRGB(*BLANCO)
+    c.rect(
         photo_x - BORDER, photo_y - BORDER,
         PHOTO_W + 2 * BORDER, PHOTO_H + 2 * BORDER,
-        3, fill=1, stroke=0,
+        fill=1, stroke=0,
     )
 
-    # ── Foto del alumno ────────────────────────────────────────────────────
-    #   - URL remota (Cloudinary): se descarga a NamedTemporaryFile
-    #   - Path local: se usa directamente
-    #   - Cualquier excepción: rect gris como placeholder
     photo_tmp_path: str | None = None
     _photo_is_downloaded = False
     try:
@@ -239,9 +219,17 @@ def generate_credential_pdf(credential_request) -> bytes:
         else:
             raise ValueError('sin foto')
     except Exception:
-        # Placeholder gris
-        c.setFillColorRGB(*GRIS)
+        # Placeholder gris con silueta
+        c.setFillColorRGB(*BORDE)
         c.rect(photo_x, photo_y, PHOTO_W, PHOTO_H, fill=1, stroke=0)
+        cx = photo_x + PHOTO_W / 2
+        c.setFillColorRGB(*GRIS)
+        c.circle(cx, photo_y + PHOTO_H * 0.66, PHOTO_W * 0.18, fill=1, stroke=0)
+        c.ellipse(
+            cx - PHOTO_W * 0.26, photo_y,
+            cx + PHOTO_W * 0.26, photo_y + PHOTO_H * 0.44,
+            fill=1, stroke=0,
+        )
     finally:
         if _photo_is_downloaded and photo_tmp_path and os.path.exists(photo_tmp_path):
             try:
@@ -249,80 +237,94 @@ def generate_credential_pdf(credential_request) -> bytes:
             except OSError:
                 pass
 
-    # Badge "ESTUD." debajo de la foto
-    badge_w, badge_h = 2.2 * cm, 0.42 * cm
-    badge_x = (SIDEBAR_W - badge_w) / 2
-    badge_y = photo_y - 0.6 * cm
-    c.setFillColorRGB(*BLANCO)
-    c.setFillAlpha(0.20)
-    c.roundRect(badge_x, badge_y, badge_w, badge_h, 3, fill=1, stroke=0)
-    c.setFillAlpha(1.0)
-    c.setFillColorRGB(*BLANCO)
-    c.setFont('Helvetica-Bold', 6)
-    c.drawCentredString(SIDEBAR_W / 2, badge_y + 0.14 * cm, 'ESTUD.')
-
     # ═══════════════════════════════════════════════════════════════════════
-    # 4. CONTENIDO (columna derecha)
+    # 5. CONTENIDO — Datos del estudiante
     # ═══════════════════════════════════════════════════════════════════════
 
-    x0    = SIDEBAR_W + PAD
-    col_w = (W - SIDEBAR_W - 2 * PAD) / 2   # ancho de cada mitad del grid
-    # cursor: posición vertical actual (en pts), decrece hacia abajo
-    cursor = y_header - PAD
+    # x0: inicio del área de texto (a la derecha de la foto)
+    x0 = photo_x + PHOTO_W + PAD
 
-    # ── Nombre completo (13 pt, azul) ─────────────────────────────────────
-    c.setFont('Helvetica-Bold', 13)
-    c.setFillColorRGB(*AZUL)
-    cursor -= 13
-    c.drawString(x0, cursor, student.get_full_name().upper())
-    cursor -= 0.2 * cm
+    # QR reserva la esquina inferior derecha
+    QR_SIZE = 14.0 * mm
+    qr_x    = W - QR_SIZE - PAD
+    qr_y    = BOT_H + PAD
 
-    # ── Programa (9 pt, gris, máx 2 líneas) ──────────────────────────────
-    prog_lines = _split_into_lines(enrollment.program.name, 'Helvetica', 9, col_w * 2)[:2]
-    c.setFont('Helvetica', 9)
-    c.setFillColorRGB(*GRIS)
-    for prog_line in prog_lines:
-        cursor -= round(9 * 1.35)
-        c.drawString(x0, cursor, prog_line)
-    cursor -= 0.55 * cm
+    # Ancho máximo de texto para no solapar QR
+    text_w = qr_x - x0 - PAD
 
-    # ── Grid 2×2 ──────────────────────────────────────────────────────────
+    # cursor: y-position (pts), decrece hacia abajo
+    cursor = body_top - PAD
 
-    # Fila 1 — etiquetas
-    c.setFont('Helvetica-Bold', 6.5)
-    c.setFillColorRGB(*GRIS)
-    c.drawString(x0,         cursor, 'MATRÍCULA')
-    c.drawString(x0 + col_w, cursor, 'PERIODO')
-    cursor -= round(6.5 * 1.3)
-
-    # Fila 1 — valores
-    c.setFont('Courier-Bold', 11)
+    # ── Nombre completo ────────────────────────────────────────────────────
+    NAME_PT = 8.0
+    name_lines = _split_into_lines(
+        student.get_full_name().upper(), 'Helvetica-Bold', NAME_PT, text_w
+    )[:2]
+    c.setFont('Helvetica-Bold', NAME_PT)
     c.setFillColorRGB(*OSCURO)
-    c.drawString(x0, cursor, enrollment.matricula)
-    c.setFont('Helvetica-Bold', 10)
-    c.drawString(x0 + col_w, cursor, enrollment.period.name)
-    cursor -= 0.55 * cm
+    for line in name_lines:
+        cursor -= NAME_PT
+        c.drawString(x0, cursor, line)
+        cursor -= NAME_PT * 0.25
 
-    # Fila 2 — etiquetas
-    c.setFont('Helvetica-Bold', 6.5)
+    cursor -= 1.5 * mm
+
+    # ── Programa ──────────────────────────────────────────────────────────
+    PROG_PT = 6.0
+    prog_lines = _split_into_lines(
+        enrollment.program.name, 'Helvetica', PROG_PT, text_w
+    )[:2]
+    c.setFont('Helvetica', PROG_PT)
     c.setFillColorRGB(*GRIS)
-    c.drawString(x0,         cursor, 'VÁLIDO HASTA')
-    c.drawString(x0 + col_w, cursor, 'TIPO')
-    cursor -= round(6.5 * 1.3)
+    for line in prog_lines:
+        cursor -= PROG_PT
+        c.drawString(x0, cursor, line)
+        cursor -= PROG_PT * 0.25
 
-    # Fila 2 — valores
-    c.setFont('Helvetica-Bold', 10)
-    c.setFillColorRGB(*ROJO)
-    c.drawString(x0, cursor, valid_until_str)
+    cursor -= 3.0 * mm
+
+    # ── Label MATRÍCULA ───────────────────────────────────────────────────
+    LABEL_PT = 4.8
+    c.setFont('Helvetica-Bold', LABEL_PT)
+    c.setFillColorRGB(*GRIS)
+    cursor -= LABEL_PT
+    c.drawString(x0, cursor, 'MATRÍCULA')
+    cursor -= LABEL_PT * 0.4 + 1.0 * mm
+
+    # ── Valor matrícula con highlight ─────────────────────────────────────
+    MAT_PT  = 9.5
+    mat_str = enrollment.matricula
+    mat_tw  = c.stringWidth(mat_str, 'Courier-Bold', MAT_PT)
+    # Fondo highlight pill
+    c.setFillColorRGB(*HIGHLIGHT)
+    c.roundRect(
+        x0 - 1.0 * mm, cursor - 1.2 * mm,
+        mat_tw + 2.0 * mm, MAT_PT * 0.85 + 2.0 * mm,
+        1.5, fill=1, stroke=0,
+    )
+    c.setFont('Courier-Bold', MAT_PT)
+    c.setFillColorRGB(*BRAND)
+    cursor -= MAT_PT
+    c.drawString(x0, cursor, mat_str)
+    cursor -= 3.0 * mm
+
+    # ── Label PERÍODO VIGENTE ─────────────────────────────────────────────
+    c.setFont('Helvetica-Bold', LABEL_PT)
+    c.setFillColorRGB(*GRIS)
+    cursor -= LABEL_PT
+    c.drawString(x0, cursor, 'PERÍODO VIGENTE')
+    cursor -= LABEL_PT * 0.4 + 0.5 * mm
+
+    # ── Valor período ─────────────────────────────────────────────────────
+    PER_PT = 6.5
+    c.setFont('Helvetica-Bold', PER_PT)
     c.setFillColorRGB(*OSCURO)
-    c.drawString(x0 + col_w, cursor, delivery_label)
+    cursor -= PER_PT
+    c.drawString(x0, cursor, period.name)
 
     # ═══════════════════════════════════════════════════════════════════════
-    # 5. FILA INFERIOR — QR + línea de firma (anclados sobre el footer)
+    # 6. QR — esquina inferior derecha
     # ═══════════════════════════════════════════════════════════════════════
-
-    QR_SIZE = 2.2 * cm
-    qr_y    = FOOTER_H + PAD     # base del QR, justo sobre la barra de pie
 
     qr_tmp_path: str | None = None
     try:
@@ -330,10 +332,10 @@ def generate_credential_pdf(credential_request) -> bytes:
         with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tf:
             tf.write(qr_bytes)
             qr_tmp_path = tf.name
-        c.drawImage(qr_tmp_path, x0, qr_y, width=QR_SIZE, height=QR_SIZE)
-        c.setFont('Helvetica', 5.5)
+        c.drawImage(qr_tmp_path, qr_x, qr_y, width=QR_SIZE, height=QR_SIZE)
+        c.setFont('Helvetica', 4.0)
         c.setFillColorRGB(*GRIS)
-        c.drawCentredString(x0 + QR_SIZE / 2, qr_y - 0.25 * cm, 'Verificar credencial')
+        c.drawCentredString(qr_x + QR_SIZE / 2, qr_y - 2.5 * mm, 'Verificar')
     except Exception:
         logger.warning('[credential_pdf] QR no generado para matrícula %s', enrollment.matricula)
     finally:
@@ -343,27 +345,13 @@ def generate_credential_pdf(credential_request) -> bytes:
             except OSError:
                 pass
 
-    # Línea de firma (mitad derecha, alineada con el QR)
-    firma_x = x0 + col_w
-    firma_y = qr_y + QR_SIZE * 0.65
-    c.setStrokeColorRGB(*BORDE_GRIS)
-    c.setLineWidth(0.5)
-    c.line(firma_x, firma_y, firma_x + 2.8 * cm, firma_y)
-    c.setFont('Helvetica', 6)
-    c.setFillColorRGB(*GRIS)
-    c.drawString(firma_x, firma_y - 0.3 * cm, 'Sello institucional')
-
     # ═══════════════════════════════════════════════════════════════════════
-    # 6. BARRA DE PIE
+    # 7. FRANJA INFERIOR
     # ═══════════════════════════════════════════════════════════════════════
 
-    c.setFont('Helvetica', 6)
-    c.setFillColorRGB(*GRIS)
-    c.drawRightString(
-        W - PAD,
-        FOOTER_H * 0.30,
-        'Documento oficial de identificación — Propiedad de la institución',
-    )
+    c.setFont('Helvetica-Bold', 4.5)
+    c.setFillColorRGB(*BLANCO)
+    c.drawCentredString(W / 2, BOT_H * 0.28, 'CREDENCIAL ESTUDIANTIL VÁLIDA')
 
     c.save()
     buf.seek(0)
