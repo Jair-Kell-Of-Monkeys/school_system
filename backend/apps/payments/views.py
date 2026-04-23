@@ -346,81 +346,237 @@ class PaymentViewSet(viewsets.ModelViewSet):
     # -------------------------------------------------------------------------
 
     def _generate_slip_pdf(self, buffer, payment):
-        """Genera PDF de ficha de pago."""
+        """Genera PDF de ficha de pago con diseño institucional."""
         from reportlab.lib.pagesizes import A4
         from reportlab.lib.units import cm
         from reportlab.lib import colors
         from reportlab.platypus import (
-            SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+            SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable,
         )
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.enums import TA_CENTER
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT
 
-        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        BRAND      = colors.HexColor('#1a56db')
+        TEXT_MUTED = colors.HexColor('#6b7280')
+        ROW_ALT    = colors.HexColor('#f0f5ff')
+        HIGHLIGHT  = colors.HexColor('#dbeafe')
+        INSTR_BG   = colors.HexColor('#f9fafb')
+        CLABE_BG   = colors.HexColor('#eff6ff')
+        CLABE_BORD = colors.HexColor('#bfdbfe')
+
+        doc = SimpleDocTemplate(
+            buffer, pagesize=A4,
+            topMargin=1.5 * cm, bottomMargin=2 * cm,
+            leftMargin=2 * cm, rightMargin=2 * cm,
+        )
         styles = getSampleStyleSheet()
+        W = doc.width  # ~17 cm
+
+        h_title = ParagraphStyle(
+            'STitle', parent=styles['Normal'],
+            alignment=TA_CENTER, fontSize=17,
+            fontName='Helvetica-Bold', textColor=colors.white,
+        )
+        h_sub = ParagraphStyle(
+            'SSub', parent=styles['Normal'],
+            alignment=TA_CENTER, fontSize=10,
+            fontName='Helvetica', textColor=colors.HexColor('#c7d9f8'),
+        )
+        ref_label_s = ParagraphStyle(
+            'SRefLabel', parent=styles['Normal'],
+            alignment=TA_CENTER, fontSize=8,
+            fontName='Helvetica-Bold', textColor=TEXT_MUTED,
+            spaceAfter=2,
+        )
+        ref_num_s = ParagraphStyle(
+            'SRefNum', parent=styles['Normal'],
+            alignment=TA_CENTER, fontSize=26,
+            fontName='Courier-Bold', textColor=BRAND,
+            leading=30,
+        )
+        instr_title_s = ParagraphStyle(
+            'SInstrTitle', parent=styles['Normal'],
+            fontSize=9, fontName='Helvetica-Bold',
+            textColor=colors.HexColor('#374151'),
+            spaceBefore=4, spaceAfter=4,
+        )
+        instr_item_s = ParagraphStyle(
+            'SInstrItem', parent=styles['Normal'],
+            fontSize=9, fontName='Helvetica',
+            textColor=colors.HexColor('#374151'),
+            leftIndent=4, spaceAfter=3, leading=13,
+        )
+        clabe_label_s = ParagraphStyle(
+            'SClabeLabel', parent=styles['Normal'],
+            fontSize=8, fontName='Helvetica-Bold',
+            textColor=TEXT_MUTED,
+            spaceAfter=1,
+        )
+        clabe_val_s = ParagraphStyle(
+            'SClabeVal', parent=styles['Normal'],
+            fontSize=11, fontName='Courier-Bold',
+            textColor=BRAND,
+        )
+        footer_p = ParagraphStyle(
+            'SFooterP', parent=styles['Normal'],
+            fontSize=8, textColor=TEXT_MUTED,
+            alignment=TA_CENTER, leading=11,
+        )
+
         story = []
 
-        title_style = ParagraphStyle(
-            'CustomTitle',
-            parent=styles['Heading1'],
-            alignment=TA_CENTER,
-            fontSize=16,
+        # ── Encabezado azul institucional ─────────────────────────────────
+        header = Table(
+            [
+                [Paragraph('SISTEMA UNIVERSITARIO', h_title)],
+                [Paragraph('FICHA DE PAGO', h_sub)],
+            ],
+            colWidths=[W],
         )
-        ref_style = ParagraphStyle(
-            'RefNumber',
-            parent=styles['Heading1'],
-            alignment=TA_CENTER,
-            fontSize=24,
-            textColor=colors.HexColor('#1a56db'),
+        header.setStyle(TableStyle([
+            ('BACKGROUND',    (0, 0), (-1, -1), BRAND),
+            ('TOPPADDING',    (0, 0), (0, 0),   14),
+            ('BOTTOMPADDING', (0, 0), (0, 0),    3),
+            ('TOPPADDING',    (0, 1), (0, 1),    3),
+            ('BOTTOMPADDING', (0, 1), (0, 1),   13),
+            ('LEFTPADDING',   (0, 0), (-1, -1),  0),
+            ('RIGHTPADDING',  (0, 0), (-1, -1),  0),
+        ]))
+        story.append(header)
+        story.append(Spacer(1, 0.7 * cm))
+
+        # ── Número de referencia — elemento prominente ─────────────────────
+        ref_box = Table(
+            [
+                [Paragraph('NÚMERO DE REFERENCIA BANCARIA', ref_label_s)],
+                [Paragraph(payment.reference_number, ref_num_s)],
+            ],
+            colWidths=[W],
         )
+        ref_box.setStyle(TableStyle([
+            ('BACKGROUND',    (0, 0), (-1, -1), HIGHLIGHT),
+            ('TOPPADDING',    (0, 0), (0, 0),   12),
+            ('BOTTOMPADDING', (0, 0), (0, 0),    2),
+            ('TOPPADDING',    (0, 1), (0, 1),    4),
+            ('BOTTOMPADDING', (0, 1), (0, 1),   14),
+            ('LEFTPADDING',   (0, 0), (-1, -1),  0),
+            ('RIGHTPADDING',  (0, 0), (-1, -1),  0),
+            ('ROUNDEDCORNERS', [6],),
+        ]))
+        story.append(ref_box)
+        story.append(Spacer(1, 0.65 * cm))
 
-        story.append(Paragraph('SISTEMA UNIVERSITARIO', title_style))
-        story.append(Paragraph('FICHA DE PAGO', title_style))
-        story.append(Spacer(1, 0.5 * cm))
-
-        story.append(Paragraph('NÚMERO DE REFERENCIA', styles['Heading3']))
-        story.append(Paragraph(payment.reference_number, ref_style))
-        story.append(Spacer(1, 0.5 * cm))
-
+        # ── Datos del aspirante ────────────────────────────────────────────
         student = payment.pre_enrollment.student
         program = payment.pre_enrollment.program
-        vence = payment.created_at.date() + timedelta(days=30)
+        vence   = payment.created_at.date() + timedelta(days=30)
 
-        data = [
-            ['Aspirante:', student.get_full_name()],
-            ['CURP:', student.curp],
-            ['Programa:', program.name],
-            ['Concepto:', payment.get_payment_type_display()],
-            ['Monto:', f'${float(payment.amount):,.2f} MXN'],
-            ['Fecha de emisión:', payment.created_at.date().strftime('%d/%m/%Y')],
-            ['Vigencia:', vence.strftime('%d/%m/%Y')],
+        # row 4 = Monto (idx 4), row 6 = Vigencia (idx 6)  → HIGHLIGHT
+        rows = [
+            ['Aspirante',       student.get_full_name()],
+            ['CURP',            student.curp],
+            ['Programa',        program.name],
+            ['Concepto',        payment.get_payment_type_display()],
+            ['Monto',           f'${float(payment.amount):,.2f} MXN'],
+            ['Fecha de emisión', payment.created_at.date().strftime('%d/%m/%Y')],
+            ['Vigencia',        vence.strftime('%d/%m/%Y')],
         ]
 
-        table = Table(data, colWidths=[5 * cm, 12 * cm])
-        table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 11),
-            ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.whitesmoke, colors.white]),
-            ('GRID', (0, 0), (-1, -1), 0.25, colors.grey),
-            ('TOPPADDING', (0, 0), (-1, -1), 6),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        data_table = Table(rows, colWidths=[4.5 * cm, 12.5 * cm])
+        data_table.setStyle(TableStyle([
+            ('FONTNAME',       (0, 0), (0, -1),  'Helvetica-Bold'),
+            ('FONTNAME',       (1, 0), (1, -1),  'Helvetica'),
+            ('FONTSIZE',       (0, 0), (-1, -1), 10),
+            ('TEXTCOLOR',      (0, 0), (0, -1),  TEXT_MUTED),
+            ('TEXTCOLOR',      (1, 0), (1, -1),  colors.HexColor('#111827')),
+            ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.white, ROW_ALT]),
+            # Resaltar Monto (fila 4) y Vigencia (fila 6)
+            ('BACKGROUND',     (0, 4), (-1, 4),  HIGHLIGHT),
+            ('BACKGROUND',     (0, 6), (-1, 6),  HIGHLIGHT),
+            ('FONTNAME',       (1, 4), (1, 4),   'Helvetica-Bold'),
+            ('FONTNAME',       (1, 6), (1, 6),   'Helvetica-Bold'),
+            ('FONTSIZE',       (0, 4), (-1, 4),  11),
+            ('FONTSIZE',       (0, 6), (-1, 6),  10),
+            ('TEXTCOLOR',      (1, 4), (1, 4),   BRAND),
+            ('TEXTCOLOR',      (1, 6), (1, 6),   colors.HexColor('#b45309')),  # amber
+            ('GRID',           (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
+            ('TOPPADDING',     (0, 0), (-1, -1), 7),
+            ('BOTTOMPADDING',  (0, 0), (-1, -1), 7),
+            ('LEFTPADDING',    (0, 0), (-1, -1), 10),
+            ('RIGHTPADDING',   (0, 0), (-1, -1), 10),
         ]))
-        story.append(table)
-        story.append(Spacer(1, 1 * cm))
+        story.append(data_table)
+        story.append(Spacer(1, 0.7 * cm))
 
-        story.append(Paragraph('INSTRUCCIONES DE PAGO', styles['Heading3']))
+        # ── Instrucciones de pago ─────────────────────────────────────────
         instrucciones = [
-            '1. Realice su depósito o transferencia usando el número de referencia indicado.',
-            '2. Conserve su comprobante de pago original.',
-            '3. Suba el comprobante al portal dentro del plazo de vigencia.',
-            '4. Su pago será validado en un plazo de 24-48 horas hábiles.',
-            'CLABE interbancaria: 000 000 000 000 000 000',
-            'Banco: Banco Universitario',
+            ('1.', 'Realice su depósito o transferencia bancaria usando el número de referencia indicado arriba.'),
+            ('2.', 'Conserve el comprobante original de su operación.'),
+            ('3.', 'Ingrese al portal y suba su comprobante antes de la fecha de vigencia.'),
+            ('4.', 'Su pago será revisado y validado en un plazo de 24 a 48 horas hábiles.'),
         ]
-        for line in instrucciones:
-            story.append(Paragraph(line, styles['Normal']))
 
-        doc.build(story)
+        instr_rows = [[Paragraph('INSTRUCCIONES DE PAGO', instr_title_s)]]
+        for num, texto in instrucciones:
+            instr_rows.append([Paragraph(f'<b>{num}</b>  {texto}', instr_item_s)])
+
+        instr_table = Table(instr_rows, colWidths=[W])
+        instr_table.setStyle(TableStyle([
+            ('BACKGROUND',    (0, 0), (-1, -1), INSTR_BG),
+            ('TOPPADDING',    (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('LEFTPADDING',   (0, 0), (-1, -1), 12),
+            ('RIGHTPADDING',  (0, 0), (-1, -1), 12),
+            ('LINEBELOW',     (0, 0), (-1, 0),  0.5, colors.HexColor('#e5e7eb')),
+            ('ROUNDEDCORNERS', [4],),
+        ]))
+        story.append(instr_table)
+        story.append(Spacer(1, 0.5 * cm))
+
+        # ── Datos bancarios ────────────────────────────────────────────────
+        clabe_rows = [
+            [Paragraph('CLABE INTERBANCARIA', clabe_label_s),
+             Paragraph('BANCO', clabe_label_s)],
+            [Paragraph('000 000 000 000 000 000', clabe_val_s),
+             Paragraph('Banco Universitario', clabe_val_s)],
+        ]
+        clabe_table = Table(clabe_rows, colWidths=[W * 0.60, W * 0.40])
+        clabe_table.setStyle(TableStyle([
+            ('BACKGROUND',    (0, 0), (-1, -1), CLABE_BG),
+            ('LINEAFTER',     (0, 0), (0, -1),  0.5, CLABE_BORD),
+            ('BOX',           (0, 0), (-1, -1), 1.0, CLABE_BORD),
+            ('TOPPADDING',    (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('LEFTPADDING',   (0, 0), (-1, -1), 12),
+            ('RIGHTPADDING',  (0, 0), (-1, -1), 12),
+        ]))
+        story.append(clabe_table)
+        story.append(Spacer(1, 0.8 * cm))
+
+        # ── Pie de página ─────────────────────────────────────────────────
+        story.append(HRFlowable(width=W, thickness=0.5, color=colors.HexColor('#e5e7eb')))
+        story.append(Spacer(1, 0.3 * cm))
+        story.append(Paragraph(
+            'Esta ficha de pago es un documento generado por el Sistema Universitario. '
+            'El pago no será válido sin el comprobante bancario correspondiente. '
+            'Vigencia de 30 días a partir de la fecha de emisión.',
+            footer_p,
+        ))
+
+        # ── Marca de agua diagonal ─────────────────────────────────────────
+        from reportlab.lib.pagesizes import A4 as _A4
+
+        def draw_watermark(canvas_obj, _doc_obj):
+            page_w, page_h = _A4
+            canvas_obj.saveState()
+            canvas_obj.setFont('Helvetica-Bold', 52)
+            canvas_obj.setFillColorRGB(0.76, 0.86, 0.98)
+            canvas_obj.translate(page_w / 2, page_h / 2)
+            canvas_obj.rotate(45)
+            canvas_obj.drawCentredString(0, 0, 'DOCUMENTO OFICIAL')
+            canvas_obj.restoreState()
+
+        doc.build(story, onFirstPage=draw_watermark, onLaterPages=draw_watermark)
 
     def _generate_receipt_pdf(self, buffer, payment):
         """Genera PDF de recibo oficial con diseño institucional y código QR."""
