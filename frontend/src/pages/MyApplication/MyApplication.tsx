@@ -329,7 +329,7 @@ export const MyApplication = () => {
 
   const { data: payment, isLoading: isPaymentLoading } = useQuery({
     queryKey: ['my-payment', application?.id],
-    queryFn: () => paymentsService.getPaymentForPreEnrollment(application!.id),
+    queryFn: () => paymentsService.getPaymentForPreEnrollment(application!.id, 'examen_admision'),
     enabled: !!application && PAYMENT_STATUSES.includes(application.status),
   });
 
@@ -342,7 +342,7 @@ export const MyApplication = () => {
 
   const { data: enrollmentPayment, isLoading: isEnrollPaymentLoading } = useQuery({
     queryKey: ['enrollment-payment', application?.id],
-    queryFn: () => paymentsService.getPaymentForPreEnrollment(application!.id),
+    queryFn: () => paymentsService.getPaymentForPreEnrollment(application!.id, 'inscripcion'),
     enabled: !!enrollment && ENROLLMENT_PAYMENT_STATUSES.includes(enrollment.status),
   });
 

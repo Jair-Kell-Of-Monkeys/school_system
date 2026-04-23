@@ -14,11 +14,14 @@ export const paymentsService = {
     return response.data;
   },
 
-  // Obtener el pago asociado a una pre-inscripción (uso del aspirante)
-  async getPaymentForPreEnrollment(preEnrollmentId: string): Promise<Payment | null> {
-    const response = await axios.get('/pre-enrollments/payments/', {
-      params: { pre_enrollment: preEnrollmentId },
-    });
+  // Obtener el pago asociado a una pre-inscripción, opcionalmente filtrado por tipo
+  async getPaymentForPreEnrollment(
+    preEnrollmentId: string,
+    paymentType?: string,
+  ): Promise<Payment | null> {
+    const params: Record<string, string> = { pre_enrollment: preEnrollmentId };
+    if (paymentType) params.payment_type = paymentType;
+    const response = await axios.get('/pre-enrollments/payments/', { params });
     const data = response.data;
     const results: Payment[] = Array.isArray(data) ? data : data.results ?? [];
     return results[0] ?? null;

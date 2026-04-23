@@ -173,6 +173,14 @@ class PaymentViewSet(viewsets.ModelViewSet):
                     '[PaymentViewSet.validate] Enrollment %s marcado como enrolled',
                     enrollment.id,
                 )
+                student_user = enrollment.student.user
+                if student_user.role == 'aspirante':
+                    student_user.role = 'alumno'
+                    student_user.save(update_fields=['role', 'updated_at'])
+                    logger.info(
+                        '[PaymentViewSet.validate] Rol cambiado a alumno: user=%s',
+                        student_user.pk,
+                    )
                 from apps.enrollments.tasks import send_enrollment_completed_email_task
                 try:
                     send_enrollment_completed_email_task.delay(str(enrollment.id))

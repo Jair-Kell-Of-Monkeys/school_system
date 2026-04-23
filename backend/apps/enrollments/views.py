@@ -321,29 +321,12 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
                 and required_docs.filter(status='approved').count() == len(REQUIRED_DOC_TYPES)
             )
             if all_approved and enrollment.status == 'pending_docs':
-                enrollment.status = 'enrolled'
+                enrollment.status = 'pending_payment'
                 enrollment.save(update_fields=['status', 'updated_at'])
-
-                # Cambiar rol de aspirante a alumno
-                student_user = enrollment.student.user
-                if student_user.role == 'aspirante':
-                    student_user.role = 'alumno'
-                    student_user.save(update_fields=['role', 'updated_at'])
-                    logger.info(
-                        '[EnrollmentViewSet.review_document] Rol cambiado a alumno: user=%s',
-                        student_user.pk,
-                    )
-
                 logger.info(
-                    '[EnrollmentViewSet.review_document] Inscripción completada: enrollment=%s',
+                    '[EnrollmentViewSet.review_document] Docs aprobados, enrollment=%s → pending_payment',
                     enrollment.pk,
                 )
-                from .tasks import send_enrollment_completed_email_task
-                try:
-                    send_enrollment_completed_email_task.delay(str(enrollment.id))
-                except Exception:
-                    from .email_service import send_enrollment_completed_email
-                    send_enrollment_completed_email(enrollment)
 
         elif action_type == 'reject':
             from .tasks import send_enrollment_document_rejected_email_task
