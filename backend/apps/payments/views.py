@@ -423,31 +423,76 @@ class PaymentViewSet(viewsets.ModelViewSet):
         doc.build(story)
 
     def _generate_receipt_pdf(self, buffer, payment):
-        """Genera PDF de recibo oficial."""
+        """Genera PDF de recibo oficial con diseño institucional y código QR."""
+        import io as _io
+        import qrcode
         from reportlab.lib.pagesizes import A4
         from reportlab.lib.units import cm
         from reportlab.lib import colors
         from reportlab.platypus import (
-            SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+            SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
+            HRFlowable, Image,
         )
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         from reportlab.lib.enums import TA_CENTER
 
-        doc = SimpleDocTemplate(buffer, pagesize=A4)
-        styles = getSampleStyleSheet()
-        story = []
+        BRAND      = colors.HexColor('#1a56db')
+        TEXT_MUTED = colors.HexColor('#6b7280')
+        ROW_ALT    = colors.HexColor('#f0f5ff')
+        HIGHLIGHT  = colors.HexColor('#dbeafe')
 
-        title_style = ParagraphStyle(
-            'CustomTitle',
-            parent=styles['Heading1'],
-            alignment=TA_CENTER,
-            fontSize=16,
+        doc = SimpleDocTemplate(
+            buffer, pagesize=A4,
+            topMargin=1.5 * cm, bottomMargin=2 * cm,
+            leftMargin=2 * cm, rightMargin=2 * cm,
+        )
+        styles = getSampleStyleSheet()
+        W = doc.width  # ~17 cm
+
+        h_title = ParagraphStyle(
+            'RTitle', parent=styles['Normal'],
+            alignment=TA_CENTER, fontSize=17,
+            fontName='Helvetica-Bold', textColor=colors.white,
+        )
+        h_sub = ParagraphStyle(
+            'RSub', parent=styles['Normal'],
+            alignment=TA_CENTER, fontSize=10,
+            fontName='Helvetica', textColor=colors.HexColor('#c7d9f8'),
+        )
+        footer_p = ParagraphStyle(
+            'RFooterP', parent=styles['Normal'],
+            fontSize=8, textColor=TEXT_MUTED,
+            alignment=TA_CENTER, leading=11,
+        )
+        qr_caption = ParagraphStyle(
+            'RQRCap', parent=styles['Normal'],
+            fontSize=7, textColor=TEXT_MUTED,
+            alignment=TA_CENTER, leading=10,
         )
 
-        story.append(Paragraph('SISTEMA UNIVERSITARIO', title_style))
-        story.append(Paragraph('RECIBO OFICIAL DE PAGO', title_style))
-        story.append(Spacer(1, 0.5 * cm))
+        story = []
 
+        # ── Encabezado con fondo azul institucional ───────────────────────
+        header = Table(
+            [
+                [Paragraph('SISTEMA UNIVERSITARIO', h_title)],
+                [Paragraph('RECIBO OFICIAL DE PAGO', h_sub)],
+            ],
+            colWidths=[W],
+        )
+        header.setStyle(TableStyle([
+            ('BACKGROUND',    (0, 0), (-1, -1), BRAND),
+            ('TOPPADDING',    (0, 0), (0, 0),   14),
+            ('BOTTOMPADDING', (0, 0), (0, 0),    3),
+            ('TOPPADDING',    (0, 1), (0, 1),    3),
+            ('BOTTOMPADDING', (0, 1), (0, 1),   13),
+            ('LEFTPADDING',   (0, 0), (-1, -1),  0),
+            ('RIGHTPADDING',  (0, 0), (-1, -1),  0),
+        ]))
+        story.append(header)
+        story.append(Spacer(1, 0.6 * cm))
+
+        # ── Datos del pago ────────────────────────────────────────────────
         student = payment.pre_enrollment.student
         program = payment.pre_enrollment.program
 
@@ -463,33 +508,376 @@ class PaymentViewSet(viewsets.ModelViewSet):
             payment.validated_by.email if payment.validated_by else 'Sistema'
         )
 
-        data = [
-            ['Folio:', payment.reference_number],
-            ['Aspirante:', student.get_full_name()],
-            ['CURP:', student.curp],
-            ['Programa:', program.name],
-            ['Concepto:', payment.get_payment_type_display()],
-            ['Monto:', f'${float(payment.amount):,.2f} MXN'],
-            ['Fecha de pago:', payment_date_str],
-            ['Validado por:', validated_by_str],
-            ['Fecha de validación:', validated_at_str],
+        # row 0 = Folio (HIGHLIGHT), row 5 = Monto (HIGHLIGHT)
+        rows = [
+            ['Folio',               payment.reference_number],
+            ['Nombre',              student.get_full_name()],
+            ['CURP',                student.curp],
+            ['Programa',            program.name],
+            ['Concepto',            payment.get_payment_type_display()],
+            ['Monto',               f'${float(payment.amount):,.2f} MXN'],
+            ['Fecha de pago',       payment_date_str],
+            ['Validado por',        validated_by_str],
+            ['Fecha de validación', validated_at_str],
         ]
 
-        table = Table(data, colWidths=[5 * cm, 12 * cm])
-        table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 11),
-            ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.whitesmoke, colors.white]),
-            ('GRID', (0, 0), (-1, -1), 0.25, colors.grey),
-            ('TOPPADDING', (0, 0), (-1, -1), 6),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        info_table = Table(rows, colWidths=[4.5 * cm, 8.5 * cm])
+        info_table.setStyle(TableStyle([
+            ('FONTNAME',       (0, 0), (0, -1),  'Helvetica-Bold'),
+            ('FONTNAME',       (1, 0), (1, -1),  'Helvetica'),
+            ('FONTSIZE',       (0, 0), (-1, -1), 10),
+            ('TEXTCOLOR',      (0, 0), (0, -1),  TEXT_MUTED),
+            ('TEXTCOLOR',      (1, 0), (1, -1),  colors.HexColor('#111827')),
+            ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.white, ROW_ALT]),
+            # Resaltar Folio (fila 0) y Monto (fila 5)
+            ('BACKGROUND',     (0, 0), (-1, 0),  HIGHLIGHT),
+            ('BACKGROUND',     (0, 5), (-1, 5),  HIGHLIGHT),
+            ('FONTNAME',       (1, 0), (1, 0),   'Helvetica-Bold'),
+            ('FONTNAME',       (1, 5), (1, 5),   'Helvetica-Bold'),
+            ('FONTSIZE',       (0, 0), (-1, 0),  11),
+            ('FONTSIZE',       (0, 5), (-1, 5),  11),
+            ('TEXTCOLOR',      (1, 0), (1, 0),   BRAND),
+            ('TEXTCOLOR',      (1, 5), (1, 5),   BRAND),
+            ('GRID',           (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
+            ('TOPPADDING',     (0, 0), (-1, -1), 7),
+            ('BOTTOMPADDING',  (0, 0), (-1, -1), 7),
+            ('LEFTPADDING',    (0, 0), (-1, -1), 10),
+            ('RIGHTPADDING',   (0, 0), (-1, -1), 10),
         ]))
-        story.append(table)
-        story.append(Spacer(1, 1 * cm))
 
+        # ── Código QR de verificación ─────────────────────────────────────
+        qr_url = (
+            f"https://schoolsystem-production-8c10.up.railway.app"
+            f"/api/verify/payment/{payment.id}/"
+        )
+        qr_obj = qrcode.QRCode(version=1, box_size=5, border=2)
+        qr_obj.add_data(qr_url)
+        qr_obj.make(fit=True)
+        qr_pil = qr_obj.make_image(fill_color='black', back_color='white')
+        qr_buf = _io.BytesIO()
+        qr_pil.save(qr_buf, format='PNG')
+        qr_buf.seek(0)
+        qr_img = Image(qr_buf, width=3.5 * cm, height=3.5 * cm)
+
+        qr_block = Table(
+            [
+                [qr_img],
+                [Paragraph('Verificar recibo:', qr_caption)],
+                [Paragraph('escanee el código QR', qr_caption)],
+            ],
+            colWidths=[3.8 * cm],
+        )
+        qr_block.setStyle(TableStyle([
+            ('ALIGN',         (0, 0), (-1, -1), 'CENTER'),
+            ('TOPPADDING',    (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ('LEFTPADDING',   (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING',  (0, 0), (-1, -1), 0),
+        ]))
+
+        # Layout en dos columnas: datos del pago | QR
+        main_layout = Table(
+            [[info_table, qr_block]],
+            colWidths=[13 * cm, 4 * cm],
+        )
+        main_layout.setStyle(TableStyle([
+            ('VALIGN',       (0, 0), (-1, -1), 'TOP'),
+            ('ALIGN',        (1, 0), (1, 0),   'CENTER'),
+            ('LEFTPADDING',  (0, 0), (0, 0),    0),
+            ('RIGHTPADDING', (0, 0), (0, 0),    0),
+            ('LEFTPADDING',  (1, 0), (1, 0),    8),
+            ('RIGHTPADDING', (1, 0), (1, 0),    0),
+        ]))
+        story.append(main_layout)
+        story.append(Spacer(1, 0.8 * cm))
+
+        # ── Pie de página ─────────────────────────────────────────────────
+        story.append(HRFlowable(width=W, thickness=0.5, color=colors.HexColor('#e5e7eb')))
+        story.append(Spacer(1, 0.3 * cm))
         story.append(Paragraph(
-            'Este recibo acredita el pago realizado y registrado en el sistema universitario.',
-            styles['Normal'],
+            'Este recibo acredita el pago realizado y registrado en el Sistema Universitario. '
+            'Para cualquier aclaración, acuda a la oficina de Finanzas con identificación oficial vigente. '
+            'Puede verificar la autenticidad de este documento escaneando el código QR.',
+            footer_p,
         ))
 
-        doc.build(story)
+        # ── Marca de agua diagonal ────────────────────────────────────────
+        from reportlab.lib.pagesizes import A4 as _A4
+
+        def draw_watermark(canvas_obj, _doc_obj):
+            page_w, page_h = _A4
+            canvas_obj.saveState()
+            canvas_obj.setFont('Helvetica-Bold', 52)
+            canvas_obj.setFillColorRGB(0.76, 0.86, 0.98)
+            canvas_obj.translate(page_w / 2, page_h / 2)
+            canvas_obj.rotate(45)
+            canvas_obj.drawCentredString(0, 0, 'DOCUMENTO OFICIAL')
+            canvas_obj.restoreState()
+
+        doc.build(story, onFirstPage=draw_watermark, onLaterPages=draw_watermark)
+
+
+# ── Public payment verification endpoint (no auth required) ──────────────────
+
+def verify_payment_public(request, payment_id):
+    """
+    GET /api/verify/payment/<payment_id>/
+    Página HTML pública para verificar la autenticidad de un recibo de pago.
+    """
+    try:
+        payment = (
+            Payment.objects
+            .select_related(
+                'pre_enrollment',
+                'pre_enrollment__student',
+                'pre_enrollment__program',
+                'validated_by',
+            )
+            .get(pk=payment_id, status='validated')
+        )
+        found = True
+    except (Payment.DoesNotExist, Exception):
+        found = False
+        payment = None
+
+    if found:
+        student = payment.pre_enrollment.student
+        payment_date_str = (
+            payment.payment_date.strftime('%d/%m/%Y')
+            if payment.payment_date else 'N/A'
+        )
+        validated_at_str = (
+            payment.validated_at.strftime('%d/%m/%Y')
+            if payment.validated_at else 'N/A'
+        )
+        validated_by_str = (
+            payment.validated_by.email if payment.validated_by else 'Sistema'
+        )
+        amount_str = f'${float(payment.amount):,.2f} MXN'
+
+        html = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verificación de Recibo — Sistema Universitario</title>
+  <style>
+    *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    body {{
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f5ff;
+      color: #111827;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }}
+    .card {{
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(26, 86, 219, 0.10);
+      max-width: 560px;
+      width: 100%;
+      overflow: hidden;
+    }}
+    .header {{
+      background: #1a56db;
+      padding: 2rem;
+      text-align: center;
+      color: #ffffff;
+    }}
+    .header h1 {{ font-size: 1.15rem; font-weight: 700; letter-spacing: 0.05em; opacity: 0.95; }}
+    .header p {{ font-size: 0.875rem; opacity: 0.75; margin-top: 0.25rem; }}
+    .badge-valid {{
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #d1fae5;
+      color: #065f46;
+      border: 1.5px solid #6ee7b7;
+      border-radius: 9999px;
+      padding: 0.4rem 1.1rem;
+      font-size: 0.875rem;
+      font-weight: 700;
+      margin-top: 1rem;
+    }}
+    .badge-valid svg {{ flex-shrink: 0; }}
+    .body {{ padding: 1.75rem 2rem; }}
+    .field {{
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 0.65rem 0;
+      border-bottom: 1px solid #e5e7eb;
+      gap: 1rem;
+    }}
+    .field:last-child {{ border-bottom: none; }}
+    .field-label {{
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }}
+    .field-value {{
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #111827;
+      text-align: right;
+    }}
+    .field-value.highlight {{
+      color: #1a56db;
+      font-size: 1rem;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.08em;
+    }}
+    .footer {{
+      background: #f0f5ff;
+      border-top: 1px solid #dbeafe;
+      padding: 1rem 2rem;
+      text-align: center;
+      font-size: 0.75rem;
+      color: #6b7280;
+    }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <h1>SISTEMA UNIVERSITARIO</h1>
+      <p>Verificación de Recibo Oficial de Pago</p>
+      <div class="badge-valid">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+        Recibo Válido
+      </div>
+    </div>
+    <div class="body">
+      <div class="field">
+        <span class="field-label">Folio</span>
+        <span class="field-value highlight">{payment.reference_number}</span>
+      </div>
+      <div class="field">
+        <span class="field-label">Nombre</span>
+        <span class="field-value">{student.get_full_name()}</span>
+      </div>
+      <div class="field">
+        <span class="field-label">Concepto</span>
+        <span class="field-value">{payment.get_payment_type_display()}</span>
+      </div>
+      <div class="field">
+        <span class="field-label">Monto</span>
+        <span class="field-value highlight">{amount_str}</span>
+      </div>
+      <div class="field">
+        <span class="field-label">Fecha de pago</span>
+        <span class="field-value">{payment_date_str}</span>
+      </div>
+      <div class="field">
+        <span class="field-label">Validado por</span>
+        <span class="field-value">{validated_by_str}</span>
+      </div>
+      <div class="field">
+        <span class="field-label">Fecha de validación</span>
+        <span class="field-value">{validated_at_str}</span>
+      </div>
+    </div>
+    <div class="footer">
+      Este recibo ha sido verificado contra los registros oficiales del Sistema Universitario.
+    </div>
+  </div>
+</body>
+</html>"""
+    else:
+        html = """<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verificación de Recibo — Sistema Universitario</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f5ff;
+      color: #111827;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(26, 86, 219, 0.10);
+      max-width: 480px;
+      width: 100%;
+      overflow: hidden;
+    }
+    .header {
+      background: #1a56db;
+      padding: 2rem;
+      text-align: center;
+      color: #ffffff;
+    }
+    .header h1 { font-size: 1.15rem; font-weight: 700; letter-spacing: 0.05em; opacity: 0.95; }
+    .header p { font-size: 0.875rem; opacity: 0.75; margin-top: 0.25rem; }
+    .badge-invalid {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1.5px solid #fca5a5;
+      border-radius: 9999px;
+      padding: 0.4rem 1.1rem;
+      font-size: 0.875rem;
+      font-weight: 700;
+      margin-top: 1rem;
+    }
+    .body { padding: 1.75rem 2rem; text-align: center; color: #6b7280; font-size: 0.9rem; }
+    .footer {
+      background: #f0f5ff;
+      border-top: 1px solid #dbeafe;
+      padding: 1rem 2rem;
+      text-align: center;
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <h1>SISTEMA UNIVERSITARIO</h1>
+      <p>Verificación de Recibo Oficial de Pago</p>
+      <div class="badge-invalid">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="15" y1="9" x2="9" y2="15"/>
+          <line x1="9" y1="9" x2="15" y2="15"/>
+        </svg>
+        Recibo No Válido o No Encontrado
+      </div>
+    </div>
+    <div class="body">
+      <p>No se encontró un recibo válido con este identificador.</p>
+      <p style="margin-top:0.5rem;">El documento puede ser inválido, el pago no ha sido validado aún, o el código QR puede estar dañado.</p>
+    </div>
+    <div class="footer">
+      Si crees que esto es un error, acude a la oficina de Finanzas con tu recibo físico.
+    </div>
+  </div>
+</body>
+</html>"""
+
+    return HttpResponse(html, content_type='text/html; charset=utf-8')
