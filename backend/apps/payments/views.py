@@ -69,7 +69,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
         elif user.role == 'servicios_escolares':
             programs = user.get_accessible_programs()
             return qs.filter(pre_enrollment__program__in=programs)
-        elif user.role == 'aspirante':
+        elif user.role in ('aspirante', 'alumno'):
             return qs.filter(pre_enrollment__student__user=user)
         return Payment.objects.none()
 
