@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
+import * as pdfjsLib from 'pdfjs-dist';
 import { authService } from '@/services/auth/authService';
 import { ROUTES } from '@/config/constants';
 import type { RegisterData } from '@/types';
@@ -9,7 +10,24 @@ import {
   CheckCircle, Phone, MapPin, Calendar, CreditCard,
 } from 'lucide-react';
 
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).toString();
+
 // ── Helpers ────────────────────────────────────────────────────────────────
+
+const CURP_STATE_MAP: Record<string, string> = {
+  AS: 'Aguascalientes', BC: 'Baja California', BS: 'Baja California Sur',
+  CC: 'Campeche', CL: 'Coahuila', CM: 'Colima', CS: 'Chiapas',
+  CH: 'Chihuahua', DF: 'Ciudad de México', DG: 'Durango',
+  GT: 'Guanajuato', GR: 'Guerrero', HG: 'Hidalgo', JC: 'Jalisco',
+  MC: 'Estado de México', MN: 'Michoacán', MS: 'Morelos', NT: 'Nayarit',
+  NL: 'Nuevo León', OC: 'Oaxaca', PL: 'Puebla', QT: 'Querétaro',
+  QR: 'Quintana Roo', SP: 'San Luis Potosí', SL: 'Sinaloa', SR: 'Sonora',
+  TC: 'Tabasco', TS: 'Tamaulipas', TL: 'Tlaxcala', VZ: 'Veracruz',
+  YN: 'Yucatán', ZS: 'Zacatecas', NE: 'Extranjero',
+};
 
 const GENDER_OPTIONS = [
   { value: 'masculino',         label: 'Masculino' },
@@ -172,6 +190,8 @@ export const RegisterForm = () => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [curpLookupState, setCurpLookupState] = useState<CurpLookupState>('idle');
   const [curpAutoFilled, setCurpAutoFilled] = useState(false);
+  const [pdfUploadState, setPdfUploadState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -203,6 +223,103 @@ export const RegisterForm = () => {
   const enableManualEdit = () => {
     setCurpAutoFilled(false);
     setCurpLookupState('idle');
+  };
+
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reset so the same file can be reloaded later
+    if (fileInputRef.current) fileInputRef.current.value = '';
+
+    setPdfUploadState('loading');
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+
+      // Reconstruct text lines grouped by y-position across all pages
+      const allLines: string[] = [];
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const content = await page.getTextContent();
+        const byY = new Map<number, string[]>();
+        for (const item of content.items) {
+          if ('str' in item && (item as { str: string }).str.trim()) {
+            const y = Math.round((item as { transform: number[] }).transform[5]);
+            if (!byY.has(y)) byY.set(y, []);
+            byY.get(y)!.push((item as { str: string }).str);
+          }
+        }
+        [...byY.entries()]
+          .sort((a, b) => b[0] - a[0])
+          .forEach(([, parts]) => {
+            const line = parts.join('').trim();
+            if (line) allLines.push(line);
+          });
+      }
+
+      const fullText = allLines.join('\n');
+
+      // Find CURP
+      const curpMatch = fullText.match(/[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d/);
+      if (!curpMatch) {
+        setPdfUploadState('error');
+        return;
+      }
+      const curp = curpMatch[0];
+
+      // Decode fields from CURP
+      const yy = parseInt(curp.substring(4, 6), 10);
+      const fullYear = yy <= 26 ? 2000 + yy : 1900 + yy;
+      const birthDate = `${fullYear}-${curp.substring(6, 8)}-${curp.substring(8, 10)}`;
+      const gender = curp[10] === 'H' ? 'masculino' : 'femenino';
+      const stateCode = curp.substring(11, 13);
+      const stateValue = CURP_STATE_MAP[stateCode] ?? stateCode;
+
+      // Find name: uppercase line with 2-5 words that appears at least twice
+      const EXCLUDED = new Set([
+        'ESTADOS UNIDOS MEXICANOS',
+        'SECRETARÍA DE GOBERNACIÓN',
+        'REGISTRO NACIONAL DE POBLACIÓN',
+        'CLAVE ÚNICA DE REGISTRO DE POBLACIÓN',
+      ]);
+      const nameCandidate = allLines.find((line, idx) => {
+        const words = line.split(/\s+/).filter(Boolean);
+        return (
+          words.length >= 2 &&
+          words.length <= 5 &&
+          /^[A-ZÁÉÍÓÚÜÑ\s]+$/.test(line) &&
+          !EXCLUDED.has(line) &&
+          allLines.indexOf(line, idx + 1) !== -1
+        );
+      });
+
+      let firstName = '';
+      let paternalSurname = '';
+      let maternalSurname = '';
+      if (nameCandidate) {
+        const words = nameCandidate.split(/\s+/).filter(Boolean);
+        maternalSurname = words[words.length - 1];
+        paternalSurname = words.length >= 2 ? words[words.length - 2] : '';
+        firstName = words.slice(0, Math.max(0, words.length - 2)).join(' ');
+      }
+
+      // Fill form — same setValue calls as the existing CURP autofill flow
+      if (curpAutoFilled) clearAutoFill();
+      setValue('curp', curp, { shouldValidate: true, shouldDirty: true });
+      setValue('first_name', firstName, { shouldValidate: true, shouldDirty: true });
+      setValue('last_name', paternalSurname, { shouldValidate: true, shouldDirty: true });
+      setValue('second_last_name', maternalSurname);
+      setValue('date_of_birth', birthDate, { shouldValidate: true, shouldDirty: true });
+      setValue('gender', gender, { shouldValidate: true, shouldDirty: true });
+      setValue('state', stateValue, { shouldValidate: true, shouldDirty: true });
+
+      setCurpAutoFilled(true);
+      setCurpLookupState('success');
+      setPdfUploadState('success');
+    } catch {
+      setPdfUploadState('error');
+    }
   };
 
   const handleCurpBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
@@ -323,6 +440,87 @@ export const RegisterForm = () => {
         <section>
           <SectionTitle label="Datos personales" />
           <div className="space-y-3">
+
+            {/* PDF upload — autocompletar desde PDF oficial de RENAPO */}
+            <div>
+              <label
+                className="block text-xs font-semibold mb-1.5 uppercase tracking-wide"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                Autocompletar con PDF
+              </label>
+              <label
+                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all duration-150"
+                style={{
+                  background: 'var(--bg-surface-2)',
+                  border: `1.5px solid ${
+                    pdfUploadState === 'success'
+                      ? 'var(--color-success-border)'
+                      : pdfUploadState === 'error'
+                      ? '#f87171'
+                      : 'var(--border)'
+                  }`,
+                  cursor: pdfUploadState === 'loading' ? 'not-allowed' : 'pointer',
+                  opacity: pdfUploadState === 'loading' ? 0.7 : 1,
+                }}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf"
+                  className="sr-only"
+                  disabled={pdfUploadState === 'loading'}
+                  onChange={handlePdfUpload}
+                />
+                {/* Document icon */}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="shrink-0"
+                  style={{
+                    color:
+                      pdfUploadState === 'success'
+                        ? 'var(--color-success)'
+                        : pdfUploadState === 'error'
+                        ? '#f87171'
+                        : 'var(--text-muted)',
+                  }}
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <polyline points="10 9 9 9 8 9" />
+                </svg>
+
+                {pdfUploadState === 'idle' && (
+                  <span style={{ color: 'var(--text-secondary)' }}>Cargar PDF de CURP</span>
+                )}
+                {pdfUploadState === 'loading' && (
+                  <>
+                    <span
+                      className="w-3.5 h-3.5 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin shrink-0"
+                    />
+                    <span style={{ color: 'var(--text-secondary)' }}>Leyendo PDF...</span>
+                  </>
+                )}
+                {pdfUploadState === 'success' && (
+                  <span style={{ color: 'var(--color-success)' }}>PDF leído correctamente</span>
+                )}
+                {pdfUploadState === 'error' && (
+                  <span style={{ color: '#f87171' }}>
+                    No se encontraron datos en el PDF. Verifica que sea el PDF oficial de RENAPO.
+                  </span>
+                )}
+              </label>
+            </div>
 
             {/* CURP — primer campo: al llenarse dispara el autofill */}
             <div>
