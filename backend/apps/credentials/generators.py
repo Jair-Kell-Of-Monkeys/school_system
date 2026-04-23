@@ -295,17 +295,26 @@ def generate_credential_pdf(credential_request) -> bytes:
     MAT_PT  = 9.5
     mat_str = enrollment.matricula
     mat_tw  = c.stringWidth(mat_str, 'Courier-Bold', MAT_PT)
-    # Fondo highlight pill
+
+    # Calcular baseline primero, luego posicionar el rect respecto a ella
+    cursor -= MAT_PT
+    baseline = cursor
+
+    V_PAD = 1.5 * mm   # padding simétrico arriba/abajo respecto al cap-height
+    H_PAD = 1.2 * mm   # padding horizontal
+    CAP_H = MAT_PT * 0.72   # altura visible de mayúsculas/números
+
     c.setFillColorRGB(*HIGHLIGHT)
     c.roundRect(
-        x0 - 1.0 * mm, cursor - 1.2 * mm,
-        mat_tw + 2.0 * mm, MAT_PT * 0.85 + 2.0 * mm,
+        x0 - H_PAD,
+        baseline - V_PAD,
+        mat_tw + 2 * H_PAD,
+        CAP_H + 2 * V_PAD,
         1.5, fill=1, stroke=0,
     )
     c.setFont('Courier-Bold', MAT_PT)
     c.setFillColorRGB(*BRAND)
-    cursor -= MAT_PT
-    c.drawString(x0, cursor, mat_str)
+    c.drawString(x0, baseline, mat_str)
     cursor -= 3.0 * mm
 
     # ── Label PERÍODO VIGENTE ─────────────────────────────────────────────
