@@ -124,10 +124,24 @@ class PaymentCreateSerializer(serializers.Serializer):
                     'No puede crear pagos para esta solicitud'
                 )
 
-        if pre_enrollment.status != 'payment_pending':
-            raise serializers.ValidationError(
-                'La solicitud debe estar en estado de pago pendiente'
-            )
+        payment_type = data['payment_type']
+        if payment_type == 'inscripcion':
+            from apps.enrollments.models import Enrollment
+            try:
+                enrollment = Enrollment.objects.get(pre_enrollment=pre_enrollment)
+                if enrollment.status != 'pending_payment':
+                    raise serializers.ValidationError(
+                        'La inscripción debe estar en estado de pago pendiente'
+                    )
+            except Enrollment.DoesNotExist:
+                raise serializers.ValidationError(
+                    'No existe una inscripción para esta solicitud'
+                )
+        else:
+            if pre_enrollment.status != 'payment_pending':
+                raise serializers.ValidationError(
+                    'La solicitud debe estar en estado de pago pendiente'
+                )
 
         return data
 
