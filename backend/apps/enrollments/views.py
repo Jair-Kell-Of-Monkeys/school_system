@@ -502,87 +502,170 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
         return response
 
     def _generate_enrollment_receipt_pdf(self, buffer, enrollment):
-        """Genera PDF de comprobante de inscripción."""
+        """Genera PDF de comprobante de inscripción con diseño institucional y código QR."""
+        import io as _io
+        import qrcode
         from reportlab.lib.pagesizes import A4
         from reportlab.lib.units import cm
         from reportlab.lib import colors
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.platypus import (
+            SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
+            HRFlowable, Image,
+        )
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         from reportlab.lib.enums import TA_CENTER
 
-        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        # ── Colores institucionales (consistentes con payments PDFs) ──────
+        BRAND      = colors.HexColor('#1a56db')
+        TEXT_MUTED = colors.HexColor('#6b7280')
+        ROW_ALT    = colors.HexColor('#f0f5ff')
+
+        doc = SimpleDocTemplate(
+            buffer, pagesize=A4,
+            topMargin=1.5 * cm, bottomMargin=2 * cm,
+            leftMargin=2 * cm, rightMargin=2 * cm,
+        )
         styles = getSampleStyleSheet()
+        W = doc.width  # ~17 cm
+
+        h_title = ParagraphStyle(
+            'HTitle', parent=styles['Normal'],
+            alignment=TA_CENTER, fontSize=17,
+            fontName='Helvetica-Bold', textColor=colors.white,
+        )
+        h_sub = ParagraphStyle(
+            'HSub', parent=styles['Normal'],
+            alignment=TA_CENTER, fontSize=10,
+            fontName='Helvetica', textColor=colors.HexColor('#c7d9f8'),
+        )
+        footer_p = ParagraphStyle(
+            'FooterP', parent=styles['Normal'],
+            fontSize=8, textColor=TEXT_MUTED,
+            alignment=TA_CENTER, leading=11,
+        )
+        qr_caption = ParagraphStyle(
+            'QRCap', parent=styles['Normal'],
+            fontSize=7, textColor=TEXT_MUTED,
+            alignment=TA_CENTER, leading=10,
+        )
+
         story = []
 
-        title_style = ParagraphStyle(
-            'CustomTitle',
-            parent=styles['Heading1'],
-            alignment=TA_CENTER,
-            fontSize=16,
+        # ── Encabezado con fondo azul institucional ───────────────────────
+        header = Table(
+            [
+                [Paragraph('SISTEMA UNIVERSITARIO', h_title)],
+                [Paragraph('COMPROBANTE DE INSCRIPCIÓN', h_sub)],
+            ],
+            colWidths=[W],
         )
-        subtitle_style = ParagraphStyle(
-            'Subtitle',
-            parent=styles['Normal'],
-            alignment=TA_CENTER,
-            fontSize=11,
-            textColor=colors.HexColor('#555555'),
-        )
+        header.setStyle(TableStyle([
+            ('BACKGROUND',    (0, 0), (-1, -1), BRAND),
+            ('TOPPADDING',    (0, 0), (0, 0),   14),
+            ('BOTTOMPADDING', (0, 0), (0, 0),    3),
+            ('TOPPADDING',    (0, 1), (0, 1),    3),
+            ('BOTTOMPADDING', (0, 1), (0, 1),   13),
+            ('LEFTPADDING',   (0, 0), (-1, -1),  0),
+            ('RIGHTPADDING',  (0, 0), (-1, -1),  0),
+        ]))
+        story.append(header)
+        story.append(Spacer(1, 0.6 * cm))
 
-        story.append(Paragraph('SISTEMA UNIVERSITARIO', title_style))
-        story.append(Paragraph('COMPROBANTE DE INSCRIPCIÓN', title_style))
-        story.append(Spacer(1, 0.3 * cm))
-        story.append(Paragraph('Documento oficial — conserve para sus registros', subtitle_style))
-        story.append(Spacer(1, 0.8 * cm))
-
+        # ── Datos del estudiante ──────────────────────────────────────────
         student = enrollment.student
         domain = getattr(settings, 'INSTITUTIONAL_EMAIL_DOMAIN', 'universidad.edu.mx')
         institutional_email = (
-            student.institutional_email
-            or f"{enrollment.matricula}@{domain}"
+            student.institutional_email or f"{enrollment.matricula}@{domain}"
         )
-
         enrolled_at_str = (
-            enrollment.enrolled_at.strftime('%d/%m/%Y %H:%M')
-            if enrollment.enrolled_at else
-            enrollment.updated_at.strftime('%d/%m/%Y %H:%M')
+            enrollment.enrolled_at.strftime('%d/%m/%Y')
+            if enrollment.enrolled_at else enrollment.updated_at.strftime('%d/%m/%Y')
         )
 
-        data = [
-            ['Nombre completo:', student.get_full_name()],
-            ['Matrícula:', enrollment.matricula],
-            ['Correo institucional:', institutional_email],
-            ['Programa:', enrollment.program.name],
-            ['Código de programa:', enrollment.program.code],
-            ['Periodo:', enrollment.period.name],
+        rows = [
+            ['Nombre completo',      student.get_full_name()],
+            ['Matrícula',            enrollment.matricula],
+            ['Correo institucional', institutional_email],
+            ['Programa',             enrollment.program.name],
+            ['Código de programa',   enrollment.program.code],
+            ['Periodo',              enrollment.period.name],
         ]
         if enrollment.group:
-            data.append(['Grupo:', enrollment.group])
+            rows.append(['Grupo', enrollment.group])
         if enrollment.schedule:
-            data.append(['Horario:', enrollment.schedule])
-        data.append(['Fecha de inscripción:', enrolled_at_str])
+            rows.append(['Horario', enrollment.schedule])
+        rows.append(['Fecha de inscripción', enrolled_at_str])
 
-        table = Table(data, colWidths=[5 * cm, 12 * cm])
-        table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 11),
-            ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.whitesmoke, colors.white]),
-            ('GRID', (0, 0), (-1, -1), 0.25, colors.grey),
-            ('TOPPADDING', (0, 0), (-1, -1), 6),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        info_table = Table(rows, colWidths=[4.5 * cm, 8.5 * cm])
+        info_table.setStyle(TableStyle([
+            ('FONTNAME',       (0, 0), (0, -1),  'Helvetica-Bold'),
+            ('FONTNAME',       (1, 0), (1, -1),  'Helvetica'),
+            ('FONTSIZE',       (0, 0), (-1, -1), 10),
+            ('TEXTCOLOR',      (0, 0), (0, -1),  TEXT_MUTED),
+            ('TEXTCOLOR',      (1, 0), (1, -1),  colors.HexColor('#111827')),
+            ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.white, ROW_ALT]),
+            ('GRID',           (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
+            ('TOPPADDING',     (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING',  (0, 0), (-1, -1), 6),
+            ('LEFTPADDING',    (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING',   (0, 0), (-1, -1), 8),
         ]))
-        story.append(table)
-        story.append(Spacer(1, 1 * cm))
 
-        footer_style = ParagraphStyle(
-            'Footer',
-            parent=styles['Normal'],
-            fontSize=9,
-            textColor=colors.HexColor('#888888'),
+        # ── Código QR de verificación ─────────────────────────────────────
+        qr_url = (
+            f"https://schoolsystem-production-8c10.up.railway.app"
+            f"/api/verify/enrollment/{enrollment.id}/"
         )
+        qr_obj = qrcode.QRCode(version=1, box_size=5, border=2)
+        qr_obj.add_data(qr_url)
+        qr_obj.make(fit=True)
+        qr_pil = qr_obj.make_image(fill_color='black', back_color='white')
+        qr_buf = _io.BytesIO()
+        qr_pil.save(qr_buf, format='PNG')
+        qr_buf.seek(0)
+        qr_img = Image(qr_buf, width=3.5 * cm, height=3.5 * cm)
+
+        qr_block = Table(
+            [
+                [qr_img],
+                [Paragraph('Verificar comprobante:', qr_caption)],
+                [Paragraph('escanee el código QR', qr_caption)],
+            ],
+            colWidths=[3.8 * cm],
+        )
+        qr_block.setStyle(TableStyle([
+            ('ALIGN',         (0, 0), (-1, -1), 'CENTER'),
+            ('TOPPADDING',    (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ('LEFTPADDING',   (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING',  (0, 0), (-1, -1), 0),
+        ]))
+
+        # Layout en dos columnas: datos del estudiante | QR
+        main_layout = Table(
+            [[info_table, qr_block]],
+            colWidths=[13 * cm, 4 * cm],
+        )
+        main_layout.setStyle(TableStyle([
+            ('VALIGN',       (0, 0), (-1, -1), 'TOP'),
+            ('ALIGN',        (1, 0), (1, 0),   'CENTER'),
+            ('LEFTPADDING',  (0, 0), (0, 0),    0),
+            ('RIGHTPADDING', (0, 0), (0, 0),    0),
+            ('LEFTPADDING',  (1, 0), (1, 0),    8),
+            ('RIGHTPADDING', (1, 0), (1, 0),    0),
+        ]))
+        story.append(main_layout)
+        story.append(Spacer(1, 0.8 * cm))
+
+        # ── Pie de página ─────────────────────────────────────────────────
+        story.append(HRFlowable(width=W, thickness=0.5, color=colors.HexColor('#e5e7eb')))
+        story.append(Spacer(1, 0.3 * cm))
         story.append(Paragraph(
-            'Este documento es un comprobante oficial de inscripción. '
-            'Para cualquier aclaración, acuda a Servicios Escolares.',
-            footer_style,
+            'Este documento es un comprobante oficial de inscripción al Sistema Universitario. '
+            'Para cualquier aclaración o corrección de datos, acuda a la oficina de Servicios Escolares '
+            'con identificación oficial vigente. Puede verificar la autenticidad de este documento '
+            'escaneando el código QR.',
+            footer_p,
         ))
 
         doc.build(story)
