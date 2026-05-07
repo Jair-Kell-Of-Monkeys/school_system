@@ -213,19 +213,29 @@ class CredentialRequestViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if CredentialRequest.objects.filter(
+        existing_request = CredentialRequest.objects.filter(
             convocatoria=convocatoria, enrollment=enrollment
-        ).exists():
-            return Response(
-                {'error': 'Ya tienes una solicitud para esta convocatoria.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        ).first()
 
-        credential_request = CredentialRequest.objects.create(
-            convocatoria=convocatoria,
-            enrollment=enrollment,
-            status='pendiente',
-        )
+        if existing_request:
+            if existing_request.status == 'rechazada':
+                existing_request.status = 'pendiente'
+                existing_request.rejection_reason = None
+                existing_request.reviewed_by = None
+                existing_request.reviewed_at = None
+                existing_request.save()
+                credential_request = existing_request
+            else:
+                return Response(
+                    {'error': 'Ya tienes una solicitud para esta convocatoria.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        else:
+            credential_request = CredentialRequest.objects.create(
+                convocatoria=convocatoria,
+                enrollment=enrollment,
+                status='pendiente',
+            )
 
         # Enviar correo de confirmación
         from .tasks import send_credential_request_received_email_task

@@ -355,7 +355,7 @@ export const MyApplication = () => {
   const { data: activeConvocatorias = [] } = useQuery({
     queryKey: ['active-convocatorias'],
     queryFn: () => credentialsService.getConvocatorias({ status: 'activa' }),
-    enabled: !!enrollment && enrollment.status === 'enrolled' && !myCredentialRequest,
+    enabled: !!enrollment && enrollment.status === 'enrolled' && (!myCredentialRequest || myCredentialRequest.status === 'rechazada'),
   });
   const activeConvocatoria = activeConvocatorias[0] ?? null;
 
@@ -1138,13 +1138,13 @@ export const MyApplication = () => {
                   </h3>
                 </div>
 
-                {!myCredentialRequest && !activeConvocatoria && (
+                {(!myCredentialRequest || myCredentialRequest.status === 'rechazada') && !activeConvocatoria && (
                   <Callout color="info" icon={<Clock size={16} />} title="Sin convocatoria activa">
                     No hay una convocatoria de credencialización abierta en este momento. Te notificaremos cuando se inicie el proceso.
                   </Callout>
                 )}
 
-                {!myCredentialRequest && activeConvocatoria && (
+                {(!myCredentialRequest || myCredentialRequest.status === 'rechazada') && activeConvocatoria && (
                   <div className="space-y-4">
                     {/* Convocatoria info */}
                     <div
